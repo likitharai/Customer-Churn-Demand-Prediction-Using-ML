@@ -113,6 +113,21 @@ These results indicate a highly effective model for churn prediction with potent
 
 ---
 
+## 🚀 App and Deployment
+
+A new Streamlit UI app is included in `app.py`, and the model training pipeline is available in `train_model.py`.
+
+- Install app dependencies:
+  - `pip install -r requirements-app.txt`
+- Train the model:
+  - `python train_model.py`
+- Run the UI app:
+  - `streamlit run app.py`
+
+The app uses `Data/cleaned_telco.csv` and displays churn probability, risk status, and the top model drivers.
+
+---
+
 ## ⚙️ Requirements
 
 Install required packages:
