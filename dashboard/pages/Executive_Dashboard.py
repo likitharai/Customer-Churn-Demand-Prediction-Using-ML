@@ -33,7 +33,6 @@ def main() -> None:
 	st.caption("Revenue-at-risk and retention KPI overview.")
 
 	kpis = load_json(REPORTS_DIR / "executive_kpis.json")
-	summary = load_json(REPORTS_DIR / "revenue_risk_summary.csv")
 
 	if not kpis:
 		st.info("Run the revenue-risk analysis to populate executive KPIs.")
@@ -46,20 +45,20 @@ def main() -> None:
 	summary_path = REPORTS_DIR / "revenue_risk_summary.csv"
 	if summary_path.exists():
 		st.subheader("Revenue Risk Summary")
-		st.dataframe(pd.read_csv(summary_path), width="stretch")
+		st.dataframe(pd.read_csv(summary_path), use_container_width=True)
 
 	segment_path = REPORTS_DIR / "revenue_risk_by_segment.csv"
 	if segment_path.exists():
 		st.subheader("Revenue by Segment")
 		segment_df = pd.read_csv(segment_path)
-		st.dataframe(segment_df, width="stretch")
+		st.dataframe(segment_df, use_container_width=True)
 		if "Revenue_Risk" in segment_df.columns:
 			st.bar_chart(segment_df.set_index("Risk_Level")["Revenue_Risk"])
 
 	plot_path = REPORTS_DIR / "revenue_risk_by_segment.png"
 	if plot_path.exists():
 		st.subheader("Revenue Risk Chart")
-		st.image(str(plot_path), width="stretch")
+		st.image(str(plot_path), use_container_width=True)
 
 
 if __name__ == "__main__":
