@@ -1,32 +1,18 @@
-"""
-Project      : Decision Intelligence Platform
-Module       : train_model.py
-Author       : Likitha Rai
+"""Train and compare churn models, then persist the best performer."""
 
-Description:
-Train multiple ML models and automatically select the best model.
-"""
+from __future__ import annotations
 
 import json
-import warnings
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import joblib
+import numpy as np
 import pandas as pd
-
-
-from catboost import CatBoostClassifier
-from lightgbm import LGBMClassifier
-from xgboost import XGBClassifier
-
-from sklearn.ensemble import (
-    AdaBoostClassifier,
-    GradientBoostingClassifier,
-    RandomForestClassifier,
-)
-
+from sklearn.base import BaseEstimator
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
-
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -36,733 +22,257 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-
-from sklearn.model_selection import (
-    StratifiedKFold,
-    cross_val_score,
-)
-
-from sklearn.neighbors import KNeighborsClassifier
-
-from sklearn.svm import SVC
-
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.tree import DecisionTreeClassifier
 
-from src.config import (
-    MODELS_DIR,
-    PROCESSED_DATA_DIR,
-)
-
-from src.constants import RANDOM_STATE
-
+from src.config import MODELS_DIR, PROCESSED_DATA_DIR
+from src.constants import ARTIFACT_FILENAMES, CV_FOLDS, MODEL_COMPARE_ORDER, RANDOM_STATE
 from src.logger import logger
-
-
-warnings.filterwarnings("ignore")
+from src.model_config import ModelFactory
 
 
 class ModelTrainer:
-
-    def __init__(self):
-
-        self.models = {
-
-            "Logistic Regression":
-
-                LogisticRegression(
-
-                    max_iter=1000,
-
-                    random_state=RANDOM_STATE,
-
-                ),
-
-            "Decision Tree":
-
-                DecisionTreeClassifier(
-
-                    random_state=RANDOM_STATE,
-
-                ),
-
-            "Random Forest":
-
-                RandomForestClassifier(
-
-                    n_estimators=300,
-
-                    random_state=RANDOM_STATE,
-
-                ),
-
-            "Gradient Boosting":
-
-                GradientBoostingClassifier(
-
-                    random_state=RANDOM_STATE,
-
-                ),
-
-            "AdaBoost":
-
-                AdaBoostClassifier(
-
-                    random_state=RANDOM_STATE,
-
-                ),
-
-            "KNN":
-
-                KNeighborsClassifier(
-
-                    n_neighbors=7,
-
-                ),
-
-            "SVM":
-
-                SVC(
-
-                    probability=True,
-
-                    random_state=RANDOM_STATE,
-
-                ),
-
-            "LightGBM":
-
-                LGBMClassifier(
-
-                    random_state=RANDOM_STATE,
-
-                    verbosity=-1,
-
-                ),
-
-            "XGBoost":
-
-                XGBClassifier(
-
-                    random_state=RANDOM_STATE,
-
-                    eval_metric="logloss",
-
-                ),
-
-            "CatBoost":
-
-                CatBoostClassifier(
-
-                    random_state=RANDOM_STATE,
-
-                    verbose=False,
-
-                ),
-
-        }
-
-        self.best_model = None
-
-        self.best_model_name = None
-
-        self.best_accuracy = 0
-
-        self.best_roc_auc = 0.0
-
-        self.results = []
-
-    # ======================================================
-    # Load Dataset
-    # ======================================================
-
-    def load_data(self):
-
-        logger.info("Loading processed dataset...")
-
-        X_train = pd.read_csv(
-
-            PROCESSED_DATA_DIR /
-
-            "x_train.csv"
-
-        )
-
-        X_test = pd.read_csv(
-
-            PROCESSED_DATA_DIR /
-
-            "x_test.csv"
-
-        )
-
-        y_train = pd.read_csv(
-
-            PROCESSED_DATA_DIR /
-
-            "y_train.csv"
-
-        ).values.ravel()
-
-        y_test = pd.read_csv(
-
-            PROCESSED_DATA_DIR /
-
-            "y_test.csv"
-
-        ).values.ravel()
-
-        logger.info(
-
-            "Dataset Loaded Successfully."
-
-        )
-
-        return (
-
-            X_train,
-
-            X_test,
-
-            y_train,
-
-            y_test,
-
-        )
-
-    # ======================================================
-    # Cross Validation
-    # ======================================================
-
-    def cross_validation(
-
-        self,
-
-        model,
-
-        X,
-
-        y,
-
-    ):
-
-        cv = StratifiedKFold(
-
-            n_splits=5,
-
-            shuffle=True,
-
-            random_state=RANDOM_STATE,
-
-        )
-
-        score = cross_val_score(
-
-            model,
-
-            X,
-
-            y,
-
-            cv=cv,
-
-            scoring="accuracy",
-
-        )
-
-        return score.mean()
-
-    # ======================================================
-    # Evaluate Model
-    # ======================================================
-
-    def evaluate(
-
-        self,
-
-        model,
-
-        X_test,
-
-        y_test,
-
-    ):
-
-        prediction = model.predict(
-
-            X_test
-
-        )
-
-        probability = model.predict_proba(
-
-            X_test
-
-        )[:, 1]
+    """Compare candidate models and persist the best one for production use."""
+
+    def __init__(self, data_dir: Path | None = None, models_dir: Path | None = None) -> None:
+        self.data_dir = data_dir or PROCESSED_DATA_DIR
+        self.models_dir = models_dir or MODELS_DIR
+        self.models = self._build_models()
+        self.best_model: BaseEstimator | None = None
+        self.best_model_name: str | None = None
+        self.best_roc_auc: float = float("-inf")
+        self.best_accuracy: float = float("-inf")
+        self.results: list[dict[str, Any]] = []
+
+    def _build_models(self) -> dict[str, BaseEstimator]:
+        """Build the default comparison models in the requested order."""
+
+        available_models = ModelFactory.available_models()
+        models: dict[str, BaseEstimator] = {}
+
+        for model_name in MODEL_COMPARE_ORDER:
+            model = available_models.get(model_name)
+            if model is None:
+                logger.warning("Skipping unavailable model: %s", model_name)
+                continue
+            models[model_name] = model
+
+        return models
+
+    def load_data(self) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+        """Load the processed train/test splits from disk."""
+
+        x_train_path = self.data_dir / "x_train.csv"
+        x_test_path = self.data_dir / "x_test.csv"
+        y_train_path = self.data_dir / "y_train.csv"
+        y_test_path = self.data_dir / "y_test.csv"
+
+        for path in (x_train_path, x_test_path, y_train_path, y_test_path):
+            if not path.exists():
+                raise FileNotFoundError(f"Required processed dataset not found: {path}")
+
+        X_train = pd.read_csv(x_train_path)
+        X_test = pd.read_csv(x_test_path)
+        y_train = pd.read_csv(y_train_path).iloc[:, 0]
+        y_test = pd.read_csv(y_test_path).iloc[:, 0]
+
+        logger.info("Loaded training data: train=%s, test=%s", X_train.shape, X_test.shape)
+        return X_train, X_test, y_train, y_test
+
+    @staticmethod
+    def _get_score_vector(model: BaseEstimator, X: pd.DataFrame) -> np.ndarray:
+        """Return a continuous score vector for ROC AUC calculations."""
+
+        if hasattr(model, "predict_proba"):
+            return model.predict_proba(X)[:, 1]
+        if hasattr(model, "decision_function"):
+            return model.decision_function(X)
+        return model.predict(X)
+
+    def cross_validation(self, model: BaseEstimator, X: pd.DataFrame, y: pd.Series) -> float:
+        """Measure ROC AUC with stratified cross-validation."""
+
+        cv = StratifiedKFold(n_splits=CV_FOLDS, shuffle=True, random_state=RANDOM_STATE)
+        scores = cross_val_score(model, X, y, cv=cv, scoring="roc_auc")
+        return float(scores.mean())
+
+    def evaluate(self, model: BaseEstimator, X_test: pd.DataFrame, y_test: pd.Series) -> dict[str, Any]:
+        """Evaluate a trained model on the holdout test split."""
+
+        predictions = model.predict(X_test)
+        scores = self._get_score_vector(model, X_test)
 
         metrics = {
-
-            "Accuracy":
-
-                accuracy_score(
-
-                    y_test,
-
-                    prediction,
-
-                ),
-
-            "Precision":
-
-                precision_score(
-
-                    y_test,
-
-                    prediction,
-
-                ),
-
-            "Recall":
-
-                recall_score(
-
-                    y_test,
-
-                    prediction,
-
-                ),
-
-            "F1":
-
-                f1_score(
-
-                    y_test,
-
-                    prediction,
-
-                ),
-
-            "ROC_AUC":
-
-                roc_auc_score(
-
-                    y_test,
-
-                    probability,
-
-                ),
-
-            "Confusion_Matrix":
-
-                confusion_matrix(
-
-                    y_test,
-
-                    prediction,
-
-                ),
-
-            "Classification_Report":
-
-                classification_report(
-
-                    y_test,
-
-                    prediction,
-
-                    output_dict=True,
-
-                ),
-
-        }
-
-        return metrics
-    
-
-    # ======================================================
-    # Train All Models
-    # ======================================================
-
-    def train_models(self):
-
-        (
-            X_train,
-            X_test,
-            y_train,
-            y_test,
-        ) = self.load_data()
-
-        logger.info("=" * 70)
-        logger.info("Training Models...")
-        logger.info("=" * 70)
-
-        for name, model in self.models.items():
-
-            print("\n")
-            print("=" * 70)
-            print(f"Training : {name}")
-            print("=" * 70)
-
-            model.fit(
-                X_train,
-                y_train,
-            )
-
-            metrics = self.evaluate(
-                model,
-                X_test,
+            "Accuracy": accuracy_score(y_test, predictions),
+            "Precision": precision_score(y_test, predictions, zero_division=0),
+            "Recall": recall_score(y_test, predictions, zero_division=0),
+            "F1 Score": f1_score(y_test, predictions, zero_division=0),
+            "ROC_AUC": roc_auc_score(y_test, scores),
+            "Confusion_Matrix": confusion_matrix(y_test, predictions),
+            "Classification_Report": classification_report(
                 y_test,
-            )
+                predictions,
+                output_dict=True,
+                zero_division=0,
+            ),
+        }
+        return metrics
 
-            cv_score = self.cross_validation(
-                model,
-                X_train,
-                y_train,
-            )
+    def _fit_model(self, model: BaseEstimator, X_train: pd.DataFrame, y_train: pd.Series) -> BaseEstimator:
+        """Fit a model and return the fitted instance."""
+
+        fitted_model = model.fit(X_train, y_train)
+        return fitted_model
+
+    def train_models(self) -> tuple[BaseEstimator, pd.DataFrame, pd.DataFrame]:
+        """Train all supported models and select the best one by ROC AUC."""
+
+        X_train, X_test, y_train, y_test = self.load_data()
+
+        logger.info("Starting model comparison")
+        self.results = []
+        self.best_model = None
+        self.best_model_name = None
+        self.best_roc_auc = float("-inf")
+        self.best_accuracy = float("-inf")
+
+        for model_name, model in self.models.items():
+            logger.info("Training model: %s", model_name)
+            fitted_model = self._fit_model(model, X_train, y_train)
+            metrics = self.evaluate(fitted_model, X_test, y_test)
+            cv_score = self.cross_validation(fitted_model, X_train, y_train)
 
             result = {
-
-                "Model": name,
-
-                "Accuracy":
-                    round(metrics["Accuracy"], 4),
-
-                "Precision":
-                    round(metrics["Precision"], 4),
-
-                "Recall":
-                    round(metrics["Recall"], 4),
-
-                "F1":
-                    round(metrics["F1"], 4),
-
-                "ROC_AUC":
-                    round(metrics["ROC_AUC"], 4),
-
-                "Cross_Validation":
-                    round(cv_score, 4),
-
+                "Model": model_name,
+                "Accuracy": round(float(metrics["Accuracy"]), 4),
+                "Precision": round(float(metrics["Precision"]), 4),
+                "Recall": round(float(metrics["Recall"]), 4),
+                "F1 Score": round(float(metrics["F1 Score"]), 4),
+                "ROC_AUC": round(float(metrics["ROC_AUC"]), 4),
+                "Cross_Validation": round(cv_score, 4),
             }
-
             self.results.append(result)
 
-            print(
-                f"Accuracy          : {metrics['Accuracy']:.4f}"
-            )
-
-            print(
-                f"Precision         : {metrics['Precision']:.4f}"
-            )
-
-            print(
-                f"Recall            : {metrics['Recall']:.4f}"
-            )
-
-            print(
-                f"F1 Score          : {metrics['F1']:.4f}"
-            )
-
-            print(
-                f"ROC AUC           : {metrics['ROC_AUC']:.4f}"
-            )
-
-            print(
-                f"Cross Validation  : {cv_score:.4f}"
-            )
-
-            print("\nConfusion Matrix")
-
-            print(
-                metrics["Confusion_Matrix"]
-            )
-
-            print("\nClassification Report")
-
-            print(
-                classification_report(
-                    y_test,
-                    model.predict(X_test),
-                    digits=4,
-                )
-            )
-
             if metrics["ROC_AUC"] > self.best_roc_auc:
-
-                self.best_roc_auc = metrics["ROC_AUC"]
-
-                self.best_accuracy = metrics["Accuracy"]
-
-                self.best_model = model
-
-                self.best_model_name = name
-
-        logger.info("Training Completed.")
-
-        self.results = pd.DataFrame(
-            self.results
-        )
-
-        self.results = self.results.sort_values(
-
-            by="ROC_AUC",
-
-            ascending=False,
-
-        )
-
-        print("\n")
-        print("=" * 70)
-        print("MODEL COMPARISON")
-        print("=" * 70)
-
-        print(self.results)
-
-        print("\n")
-        print("=" * 70)
-        print(f"BEST MODEL : {self.best_model_name}")
-        print(f"BEST ROC-AUC : {self.best_roc_auc:.4f}")
-        print(f"BEST ACCURACY : {self.best_accuracy:.4f}")
-        print("=" * 70)
-
-        return (
-
-            self.best_model,
-
-            self.results,
-
-            X_train,
-
-        )
-
-    # ======================================================
-    # Save Best Model
-    # ======================================================
-
-    def save_best_model(self):
-
-        MODELS_DIR.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        model_path = MODELS_DIR / "churn_model.pkl"
-
-        joblib.dump(
-            self.best_model,
-            model_path,
-        )
-
-        logger.info(
-            f"Best Model Saved : {model_path}"
-        )
-
-    # ======================================================
-    # Save Metrics
-    # ======================================================
-
-    def save_metrics(self):
-
-        metrics_path = (
-            MODELS_DIR /
-            "model_metrics.csv"
-        )
-
-        self.results.to_csv(
-            metrics_path,
-            index=False,
-        )
-
-        logger.info(
-            f"Metrics Saved : {metrics_path}"
-        )
-
-    # ======================================================
-    # Save Best Model Information
-    # ======================================================
-
-    def save_best_model_info(self):
-
-        info = {
-
-            "best_model": self.best_model_name,
-
-            "accuracy": round(
-                self.best_accuracy,
-                4,
-            ),
-             
-            "roc_auc": round(
-                self.best_roc_auc,
-                4,
-            ),
-
-        }
-
-        info_path = (
-            MODELS_DIR /
-            "best_model_info.json"
-        )
-
-        with open(
-            info_path,
-            "w",
-        ) as file:
-
-            json.dump(
-                info,
-                file,
-                indent=4,
-            )
-
-        logger.info(
-            f"Best Model Info Saved : {info_path}"
-        )
-
-    # ======================================================
-    # Save Feature Importance
-    # ======================================================
-
-    def save_feature_importance(
-        self,
-        X_train,
-    ):
-
-        if hasattr(
-            self.best_model,
-            "feature_importances_",
-        ):
-
-            importance = pd.DataFrame(
-
-                {
-
-                    "Feature": X_train.columns,
-
-                    "Importance":
-                        self.best_model.feature_importances_,
-
-                }
-
-            )
-
-            importance = importance.sort_values(
-
-                by="Importance",
-
-                ascending=False,
-
-            )
-
-            importance_path = (
-
-                MODELS_DIR /
-
-                "feature_importance.csv"
-
-            )
-
-            importance.to_csv(
-
-                importance_path,
-
-                index=False,
-
-            )
+                self.best_roc_auc = float(metrics["ROC_AUC"])
+                self.best_accuracy = float(metrics["Accuracy"])
+                self.best_model = fitted_model
+                self.best_model_name = model_name
 
             logger.info(
-
-                f"Feature Importance Saved : {importance_path}"
-
+                "Model %s -> Accuracy=%.4f Precision=%.4f Recall=%.4f F1=%.4f ROC_AUC=%.4f CV=%.4f",
+                model_name,
+                metrics["Accuracy"],
+                metrics["Precision"],
+                metrics["Recall"],
+                metrics["F1 Score"],
+                metrics["ROC_AUC"],
+                cv_score,
             )
 
-            print("\n")
+        if self.best_model is None or self.best_model_name is None:
+            raise RuntimeError("No model could be trained successfully")
 
-            print("=" * 70)
+        results_df = pd.DataFrame(self.results).sort_values(by="ROC_AUC", ascending=False)
+        logger.info("Best model selected: %s", self.best_model_name)
+        return self.best_model, results_df, X_train
 
-            print("TOP 15 IMPORTANT FEATURES")
+    def save_best_model(self) -> Path:
+        """Persist the best model as the production artifact."""
 
-            print("=" * 70)
+        if self.best_model is None:
+            raise RuntimeError("Best model is not available")
 
-            print(
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        model_path = self.models_dir / ARTIFACT_FILENAMES["best_model"]
+        joblib.dump(self.best_model, model_path)
+        logger.info("Saved best model to %s", model_path)
+        return model_path
 
-                importance.head(15)
+    def save_metrics(self) -> Path:
+        """Persist the model comparison table."""
 
-            )
+        metrics_path = self.models_dir / ARTIFACT_FILENAMES["model_metrics"]
+        results_df = pd.DataFrame(self.results).sort_values(by="ROC_AUC", ascending=False)
+        results_df.to_csv(metrics_path, index=False)
+        logger.info("Saved model metrics to %s", metrics_path)
+        return metrics_path
 
-    # ======================================================
-    # Run
-    # ======================================================
+    def save_best_model_info(self) -> Path:
+        """Persist metadata about the selected best model."""
 
-    def run(self):
+        if self.best_model_name is None:
+            raise RuntimeError("Best model name is not available")
 
-        (
+        info = {
+            "best_model": self.best_model_name,
+            "accuracy": round(self.best_accuracy, 4),
+            "roc_auc": round(self.best_roc_auc, 4),
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        }
 
-            self.best_model,
+        info_path = self.models_dir / ARTIFACT_FILENAMES["best_model_info"]
+        with info_path.open("w", encoding="utf-8") as file:
+            json.dump(info, file, indent=4)
 
-            self.results,
+        logger.info("Saved best model info to %s", info_path)
+        return info_path
 
-            X_train,
+    def save_feature_importance(self, X_train: pd.DataFrame) -> Path | None:
+        """Persist feature importance or coefficients for the best model."""
 
-        ) = self.train_models()
+        if self.best_model is None:
+            raise RuntimeError("Best model is not available")
 
-        self.save_best_model()
+        importance_path = self.models_dir / ARTIFACT_FILENAMES["feature_importance"]
 
-        self.save_metrics()
+        if hasattr(self.best_model, "feature_importances_"):
+            importance = pd.DataFrame(
+                {
+                    "Feature": X_train.columns,
+                    "Importance": self.best_model.feature_importances_,
+                }
+            ).sort_values(by="Importance", ascending=False)
+            importance.to_csv(importance_path, index=False)
+            logger.info("Saved tree-based feature importance to %s", importance_path)
+            return importance_path
 
-        self.save_best_model_info()
+        if hasattr(self.best_model, "coef_"):
+            coefficients = np.abs(np.ravel(self.best_model.coef_))
+            importance = pd.DataFrame(
+                {
+                    "Feature": X_train.columns[: len(coefficients)],
+                    "Importance": coefficients,
+                }
+            ).sort_values(by="Importance", ascending=False)
+            importance.to_csv(importance_path, index=False)
+            logger.info("Saved coefficient-based feature importance to %s", importance_path)
+            return importance_path
 
-        self.save_feature_importance(
+        logger.info("Best model does not expose feature importance")
+        return None
 
-            X_train
+    def run(self) -> dict[str, Any]:
+        """Execute the full model comparison and persistence workflow."""
 
-        )
+        try:
+            best_model, results_df, X_train = self.train_models()
+            self.save_best_model()
+            self.save_metrics()
+            self.save_best_model_info()
+            self.save_feature_importance(X_train)
 
-        print("\n")
+            logger.info("Model training completed successfully")
+            return {
+                "best_model": best_model,
+                "model_metrics": results_df,
+                "best_model_name": self.best_model_name,
+            }
+        except Exception as exc:
+            logger.exception("Model training failed")
+            raise RuntimeError("Model training pipeline failed") from exc
 
-        print("=" * 80)
-
-        print("MODEL TRAINING COMPLETED SUCCESSFULLY")
-
-        print("=" * 80)
-
-        print()
-
-        print("Generated Files")
-
-        print("----------------------------")
-
-        print("✔ churn_model.pkl")
-
-        print("✔ model_metrics.csv")
-
-        print("✔ best_model_info.json")
-
-        print("✔ feature_importance.csv")
-
-        logger.info(
-
-            "=" * 80
-
-        )
-
-        logger.info(
-
-            "MODEL TRAINING COMPLETED"
-
-        )
-
-        logger.info(
-
-            "=" * 80
-
-        )
-
-
-# ======================================================
-# Main
-# ======================================================
 
 if __name__ == "__main__":
-
     trainer = ModelTrainer()
-
-    trainer.run()        
+    trainer.run()

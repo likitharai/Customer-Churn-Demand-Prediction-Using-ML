@@ -1,757 +1,234 @@
-"""
-Project      : Decision Intelligence Platform
-Module       : revenue_risk.py
-Author       : Likitha Rai
+"""Estimate revenue risk and executive KPIs from churn predictions."""
 
-Description:
-Estimate revenue risk using the trained churn model.
-"""
+from __future__ import annotations
 
 import json
-import joblib
-import warnings
+from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from src.config import (
-    MODELS_DIR,
-    PROCESSED_DATA_DIR,
-    REPORTS_DIR,
-)
-
+from src.config import PROCESSED_DATA_DIR, REPORTS_DIR
+from src.constants import RISK_THRESHOLDS, TARGET_COLUMN
 from src.logger import logger
-
-warnings.filterwarnings("ignore")
+from src.predict import ChurnPredictor
 
 
 class RevenueRiskAnalyzer:
+    """Convert churn predictions into revenue-at-risk business metrics."""
 
-    def __init__(self):
+    def __init__(self, data_file: Path | None = None, reports_dir: Path | None = None) -> None:
+        self.data_file = data_file or (PROCESSED_DATA_DIR / "cleaned_telco.csv")
+        self.reports_dir = reports_dir or REPORTS_DIR
+        self.predictor = ChurnPredictor()
+        self.data: pd.DataFrame | None = None
+        self.summary: dict[str, Any] | None = None
 
-        self.model = joblib.load(
+    def load_dataset(self) -> pd.DataFrame:
+        """Load the cleaned dataset with raw business values."""
 
-            MODELS_DIR /
+        if not self.data_file.exists():
+            raise FileNotFoundError(f"Cleaned dataset not found: {self.data_file}")
 
-            "best_model.pkl"
+        dataframe = pd.read_csv(self.data_file)
+        logger.info("Loaded revenue-risk input data with shape %s", dataframe.shape)
+        return dataframe
 
-        )
+    def predict(self) -> pd.DataFrame:
+        """Generate churn probabilities for the raw customer records."""
 
-        REPORTS_DIR.mkdir(
+        dataframe = self.load_dataset()
+        features = dataframe.drop(columns=[TARGET_COLUMN, "Churn"], errors="ignore")
+        predictions = self.predictor.predict_batch(features)
 
-            parents=True,
+        result = dataframe.copy()
+        for column in ("Prediction", "Probability", "Risk_Level"):
+            if column in predictions.columns:
+                result[column] = predictions[column].values
 
-            exist_ok=True,
+        if TARGET_COLUMN in result.columns:
+            result["Actual_Churn"] = result[TARGET_COLUMN]
 
-        )
-
-    # =====================================================
-    # Load Dataset
-    # =====================================================
-
-    def load_dataset(self):
-
-        logger.info(
-
-            "Loading customer dataset..."
-
-        )
-
-        business_df= pd.read_csv(
-
-            PROCESSED_DATA_DIR /
-
-            "cleaned_telco.csv"
-
-        )
-
-        y = pd.read_csv(
-
-            PROCESSED_DATA_DIR /
-
-            "y_test.csv"
-
-        ).values.ravel()
-
-        return business_df, y
-
-    # =====================================================
-    # Predict Churn
-    # =====================================================
-
-    def predict(self):
-
-        X, y = self.load_dataset()
-
-        probability = self.model.predict_proba(
-
-            X
-
-        )[:,1]
-
-        prediction = self.model.predict(
-
-            X
-
-        )
-
-        df = X.copy()
-
-        df["Actual_Churn"] = y
-
-        df["Prediction"] = prediction
-
-        df["Churn_Probability"] = probability
-
-        self.data = df
-
-        return df
-
-    # =====================================================
-    # Estimate Customer Lifetime Value
-    # =====================================================
+        self.data = result
+        logger.info("Generated churn predictions for revenue-risk analysis")
+        return result
 
     @staticmethod
-    def estimate_clv(
+    def estimate_clv(monthly_charge: float, tenure: float) -> float:
+        """Estimate customer lifetime value from monthly charge and tenure."""
 
-        monthly_charge,
+        return float(monthly_charge) * float(tenure)
 
-        tenure,
+    def calculate_revenue_risk(self) -> pd.DataFrame:
+        """Calculate customer-level CLV and revenue at risk."""
 
-    ):
+        dataframe = self.predict()
+        required_columns = {"MonthlyCharges", "tenure", "Probability"}
+        missing_columns = required_columns.difference(dataframe.columns)
+        if missing_columns:
+            raise KeyError(f"Missing required revenue-risk columns: {sorted(missing_columns)}")
 
-        return (
-
-            monthly_charge *
-
-            tenure
-
-        )
-
-    # =====================================================
-    # Revenue Risk
-    # =====================================================
-
-    def calculate_revenue_risk(self):
-
-        df = self.predict()
-
-        if "MonthlyCharges" not in df.columns:
-
-            raise ValueError(
-
-                "MonthlyCharges column missing."
-
-            )
-
-        if "tenure" not in df.columns:
-
-            raise ValueError(
-
-                "tenure column missing."
-
-            )
-
-        df["Estimated_CLV"] = df.apply(
-
-            lambda row:
-
-            self.estimate_clv(
-
-                row["MonthlyCharges"],
-
-                row["tenure"],
-
-            ),
-
+        dataframe = dataframe.copy()
+        dataframe["Estimated_CLV"] = dataframe.apply(
+            lambda row: self.estimate_clv(row["MonthlyCharges"], row["tenure"]),
             axis=1,
-
         )
+        dataframe["Revenue_Risk"] = dataframe["Estimated_CLV"] * dataframe["Probability"]
+        dataframe["Retention_Cost"] = dataframe["Revenue_Risk"] * 0.25
+        dataframe["Expected_Revenue_Saved"] = dataframe["Revenue_Risk"] - dataframe["Retention_Cost"]
+        self.data = dataframe
+        logger.info("Calculated revenue-risk columns")
+        return dataframe
 
-        df["Revenue_Risk"] = (
+    def customer_segmentation(self) -> pd.DataFrame:
+        """Assign business risk segments from churn probability."""
 
-            df["Estimated_CLV"] *
+        if self.data is None:
+            self.calculate_revenue_risk()
 
-            df["Churn_Probability"]
+        dataframe = self.data.copy()
+        dataframe["Risk_Level"] = "Very Low"
+        dataframe.loc[dataframe["Probability"] >= RISK_THRESHOLDS["low"], "Risk_Level"] = "Low"
+        dataframe.loc[dataframe["Probability"] >= RISK_THRESHOLDS["medium"], "Risk_Level"] = "Medium"
+        dataframe.loc[dataframe["Probability"] >= RISK_THRESHOLDS["high"], "Risk_Level"] = "High"
+        dataframe.loc[dataframe["Probability"] >= RISK_THRESHOLDS["very_high"], "Risk_Level"] = "Critical"
+        self.data = dataframe
+        logger.info("Assigned customer risk segments")
+        return dataframe
 
-        )
+    def high_risk_customers(self, threshold: float = RISK_THRESHOLDS["very_high"]) -> pd.DataFrame:
+        """Return the customers most likely to churn."""
 
-        self.data = df
+        if self.data is None:
+            self.customer_segmentation()
 
-        logger.info(
-
-            "Revenue Risk Calculated."
-
-        )
-
-        return df
-    
-
-    # =====================================================
-    # Customer Segmentation
-    # =====================================================
-
-    def customer_segmentation(self):
-
-        df = self.data.copy()
-
-        conditions = [
-
-            (df["Churn_Probability"] >= 0.80),
-
-            (df["Churn_Probability"] >= 0.60),
-
-            (df["Churn_Probability"] >= 0.40),
-
-            (df["Churn_Probability"] >= 0.20),
-
-        ]
-
-        labels = [
-
-            "Critical",
-
-            "High",
-
-            "Medium",
-
-            "Low",
-
-        ]
-
-        df["Risk_Level"] = "Very Low"
-
-        for condition, label in zip(conditions, labels):
-
-            df.loc[condition, "Risk_Level"] = label
-
-        self.data = df
-
-        logger.info(
-
-            "Customer Segmentation Completed."
-
-        )
-
-        return df
-
-    # =====================================================
-    # High Risk Customers
-    # =====================================================
-
-    def high_risk_customers(
-
-        self,
-
-        threshold=0.80,
-
-    ):
-
-        df = self.data.copy()
-
-        high_risk = df[
-
-            df["Churn_Probability"] >= threshold
-
-        ].sort_values(
-
+        dataframe = self.data.copy()
+        high_risk = dataframe[dataframe["Probability"] >= threshold].sort_values(
             by="Revenue_Risk",
-
             ascending=False,
-
         )
-
-        high_risk.to_csv(
-
-            REPORTS_DIR /
-
-            "high_risk_customers.csv",
-
-            index=False,
-
-        )
-
-        logger.info(
-
-            "High Risk Customers Saved."
-
-        )
-
+        high_risk.to_csv(self.reports_dir / "high_risk_customers.csv", index=False)
+        logger.info("Saved %s high-risk customers", len(high_risk))
         return high_risk
 
-    # =====================================================
-    # Revenue Summary
-    # =====================================================
+    def revenue_summary(self) -> dict[str, Any]:
+        """Generate a summary of revenue-at-risk metrics."""
 
-    def revenue_summary(self):
+        if self.data is None:
+            self.customer_segmentation()
 
-        df = self.data.copy()
-
+        dataframe = self.data.copy()
         summary = {
-
-            "Total_Customers":
-
-                len(df),
-
-            "Predicted_Churn":
-
-                int(
-
-                    df["Prediction"].sum()
-
-                ),
-
-            "Total_Revenue_Risk":
-
-                round(
-
-                    df["Revenue_Risk"].sum(),
-
-                    2,
-
-                ),
-
-            "Average_CLV":
-
-                round(
-
-                    df["Estimated_CLV"].mean(),
-
-                    2,
-
-                ),
-
-            "Average_Churn_Probability":
-
-                round(
-
-                    df["Churn_Probability"].mean(),
-
-                    4,
-
-                ),
-
+            "Total_Customers": int(len(dataframe)),
+            "Predicted_Churn": int(dataframe["Prediction"].sum()),
+            "Total_Revenue_Risk": round(float(dataframe["Revenue_Risk"].sum()), 2),
+            "Average_CLV": round(float(dataframe["Estimated_CLV"].mean()), 2),
+            "Average_Churn_Probability": round(float(dataframe["Probability"].mean()), 4),
+            "Monthly_Revenue_Loss": round(
+                float((dataframe["MonthlyCharges"] * dataframe["Probability"]).sum()),
+                2,
+            ),
+            "Retention_Cost": round(float(dataframe["Retention_Cost"].sum()), 2),
+            "Expected_Revenue_Saved": round(float(dataframe["Expected_Revenue_Saved"].sum()), 2),
         }
-
-        pd.DataFrame(
-
-            [summary]
-
-        ).to_csv(
-
-            REPORTS_DIR /
-
-            "revenue_risk_summary.csv",
-
-            index=False,
-
-        )
-
-        logger.info(
-
-            "Revenue Summary Saved."
-
-        )
-
         self.summary = summary
-
+        pd.DataFrame([summary]).to_csv(self.reports_dir / "revenue_risk_summary.csv", index=False)
+        logger.info("Saved revenue summary")
         return summary
 
-    # =====================================================
-    # Revenue by Risk Level
-    # =====================================================
+    def revenue_by_segment(self) -> pd.DataFrame:
+        """Aggregate revenue risk by customer risk segment."""
 
-    def revenue_by_segment(self):
+        if self.data is None:
+            self.customer_segmentation()
 
-        df = self.data.copy()
-
+        dataframe = self.data.copy()
         report = (
-
-            df.groupby(
-
-                "Risk_Level"
-
-            )
-
+            dataframe.groupby("Risk_Level")
             .agg(
-
-                Customers=(
-
-                    "Risk_Level",
-
-                    "count",
-
-                ),
-
-                Revenue_Risk=(
-
-                    "Revenue_Risk",
-
-                    "sum",
-
-                ),
-
-                Avg_CLV=(
-
-                    "Estimated_CLV",
-
-                    "mean",
-
-                ),
-
+                Customers=("Risk_Level", "count"),
+                Revenue_Risk=("Revenue_Risk", "sum"),
+                Avg_CLV=("Estimated_CLV", "mean"),
+                Avg_Probability=("Probability", "mean"),
             )
-
             .reset_index()
-
+            .sort_values(by="Revenue_Risk", ascending=False)
         )
-
-        report.to_csv(
-
-            REPORTS_DIR /
-
-            "revenue_risk_by_segment.csv",
-
-            index=False,
-
-        )
-
-        logger.info(
-
-            "Revenue by Segment Saved."
-
-        )
-
+        report.to_csv(self.reports_dir / "revenue_risk_by_segment.csv", index=False)
+        logger.info("Saved revenue-by-segment report")
         return report
 
-    # =====================================================
-    # Executive KPIs
-    # =====================================================
+    def executive_kpis(self) -> dict[str, Any]:
+        """Build the executive KPI snapshot used by the dashboard."""
 
-    def executive_kpis(self):
+        if self.data is None:
+            self.customer_segmentation()
 
-        df = self.data.copy()
-
+        dataframe = self.data.copy()
         kpis = {
-
-            "Total Customers":
-
-                len(df),
-
-            "High Risk Customers":
-
-                int(
-
-                    (df["Risk_Level"] == "Critical").sum()
-
-                ),
-
-            "Predicted Churn":
-
-                int(
-
-                    df["Prediction"].sum()
-
-                ),
-
-            "Revenue At Risk":
-
-                round(
-
-                    df["Revenue_Risk"].sum(),
-
-                    2,
-
-                ),
-
-            "Average CLV":
-
-                round(
-
-                    df["Estimated_CLV"].mean(),
-
-                    2,
-
-                ),
-
+            "Total Customers": int(len(dataframe)),
+            "Active Customers": int((dataframe["Prediction"] == 0).sum()),
+            "Churn Customers": int((dataframe["Prediction"] == 1).sum()),
+            "Revenue": round(float(dataframe["MonthlyCharges"].sum()), 2),
+            "Revenue At Risk": round(float(dataframe["Revenue_Risk"].sum()), 2),
+            "Customer Lifetime Value": round(float(dataframe["Estimated_CLV"].mean()), 2),
+            "Retention Savings": round(float(dataframe["Expected_Revenue_Saved"].sum()), 2),
         }
-
-        with open(
-
-            REPORTS_DIR /
-
-            "executive_kpis.json",
-
-            "w",
-
-        ) as file:
-
-            json.dump(
-
-                kpis,
-
-                file,
-
-                indent=4,
-
-            )
-
-        logger.info(
-
-            "Executive KPIs Saved."
-
-        )
-
+        output_path = self.reports_dir / "executive_kpis.json"
+        with output_path.open("w", encoding="utf-8") as file:
+            json.dump(kpis, file, indent=4)
+        logger.info("Saved executive KPIs")
         return kpis
 
-    # =====================================================
-    # Revenue Risk Visualization
-    # =====================================================
+    def plot_revenue_risk(self) -> Path:
+        """Plot revenue risk by customer segment."""
 
-    def plot_revenue_risk(self):
+        if self.data is None:
+            self.customer_segmentation()
 
-        df = self.data.copy()
+        dataframe = self.data.copy()
+        plot_data = dataframe.groupby("Risk_Level")["Revenue_Risk"].sum().sort_values(ascending=False)
+        plot_path = self.reports_dir / "revenue_risk_by_segment.png"
 
-        revenue = (
-
-            df.groupby(
-
-                "Risk_Level"
-
-            )["Revenue_Risk"]
-
-            .sum()
-
-            .sort_values(
-
-                ascending=False
-
-            )
-
-        )
-
-        plt.figure(figsize=(8,6))
-
-        revenue.plot(
-
-            kind="bar"
-
-        )
-
-        plt.title("Revenue Risk by Customer Segment")
-
+        plt.figure(figsize=(8, 5))
+        plot_data.plot(kind="bar", color="#0f766e")
+        plt.title("Revenue Risk by Segment")
         plt.xlabel("Risk Level")
-
         plt.ylabel("Revenue at Risk")
-
         plt.tight_layout()
-
-        plt.savefig(
-
-            REPORTS_DIR /
-
-            "revenue_risk_chart.png",
-
-            dpi=300,
-
-        )
-
+        plt.savefig(plot_path, dpi=300)
         plt.close()
+        logger.info("Saved revenue risk plot to %s", plot_path)
+        return plot_path
+
+    def run(self) -> dict[str, Any]:
+        """Execute the full revenue-risk workflow."""
+
+        try:
+            self.calculate_revenue_risk()
+            self.customer_segmentation()
+            high_risk = self.high_risk_customers()
+            summary = self.revenue_summary()
+            segment_report = self.revenue_by_segment()
+            kpis = self.executive_kpis()
+            self.plot_revenue_risk()
+
+            if self.data is not None:
+                self.data.to_csv(self.reports_dir / "revenue_risk_analysis.csv", index=False)
+
+            logger.info("Revenue-risk analysis completed successfully")
+            return {
+                "summary": summary,
+                "segment_report": segment_report,
+                "high_risk_customers": high_risk,
+                "executive_kpis": kpis,
+            }
+        except Exception as exc:
+            logger.exception("Revenue-risk analysis failed")
+            raise RuntimeError("Revenue-risk pipeline failed") from exc
 
-        logger.info(
-
-            "Revenue Risk Chart Saved."
-
-        )
-
-    # =====================================================
-    # Monthly Revenue Loss Estimation
-    # =====================================================
-
-    def monthly_revenue_loss(self):
-
-        df = self.data.copy()
-
-        report = (
-
-            df.groupby(
-
-                "Risk_Level"
-
-            )
-
-            .agg(
-
-                Monthly_Revenue_Loss=(
-
-                    "Revenue_Risk",
-
-                    "sum",
-
-                )
-
-            )
-
-            .reset_index()
-
-        )
-
-        report.to_csv(
-
-            REPORTS_DIR /
-
-            "monthly_revenue_loss.csv",
-
-            index=False,
-
-        )
-
-        logger.info(
-
-            "Monthly Revenue Loss Report Saved."
-
-        )
-
-        return report
-
-    # =====================================================
-    # Dashboard Summary
-    # =====================================================
-
-    def dashboard_summary(self):
-
-        print("\n")
-
-        print("=" * 80)
-
-        print("EXECUTIVE REVENUE SUMMARY")
-
-        print("=" * 80)
-
-        print(
-
-            f"Customers              : {self.summary['Total_Customers']}"
-
-        )
-
-        print(
-
-            f"Predicted Churn        : {self.summary['Predicted_Churn']}"
-
-        )
-
-        print(
-
-            f"Average CLV            : {self.summary['Average_CLV']:.2f}"
-
-        )
-
-        print(
-
-            f"Average Churn Prob.    : {self.summary['Average_Churn_Probability']:.4f}"
-
-        )
-
-        print(
-
-            f"Revenue At Risk        : ₹{self.summary['Total_Revenue_Risk']:.2f}"
-
-        )
-
-        print("=" * 80)
-
-    # =====================================================
-    # Run Complete Pipeline
-    # =====================================================
-
-    def run(self):
-
-        logger.info(
-
-            "=" * 80
-
-        )
-
-        logger.info(
-
-            "Revenue Risk Analysis Started"
-
-        )
-
-        logger.info(
-
-            "=" * 80
-
-        )
-
-        self.calculate_revenue_risk()
-
-        self.customer_segmentation()
-
-        self.high_risk_customers()
-
-        self.revenue_summary()
-
-        self.revenue_by_segment()
-
-        self.executive_kpis()
-
-        self.monthly_revenue_loss()
-
-        self.plot_revenue_risk()
-
-        self.dashboard_summary()
-
-        logger.info(
-
-            "=" * 80
-
-        )
-
-        logger.info(
-
-            "Revenue Risk Analysis Completed"
-
-        )
-
-        logger.info(
-
-            "=" * 80
-
-        )
-
-        print("\n")
-
-        print("=" * 80)
-
-        print("REVENUE RISK ANALYSIS COMPLETED")
-
-        print("=" * 80)
-
-        print()
-
-        print("Generated Files")
-
-        print("------------------------------")
-
-        print("✔ revenue_risk_summary.csv")
-
-        print("✔ revenue_risk_by_segment.csv")
-
-        print("✔ monthly_revenue_loss.csv")
-
-        print("✔ executive_kpis.json")
-
-        print("✔ high_risk_customers.csv")
-
-        print("✔ revenue_risk_chart.png")
-
-
-# =====================================================
-# Main
-# =====================================================
 
 if __name__ == "__main__":
-
     analyzer = RevenueRiskAnalyzer()
-
-    analyzer.run()        
+    analyzer.run()

@@ -1,392 +1,201 @@
-"""
-Project      : Decision Intelligence Platform
-Module       : predict.py
-Author       : Likitha Rai
+"""Run churn predictions using the persisted model and preprocessing pipeline."""
 
-Description:
-Predict customer churn using the trained model.
-"""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
 
 import joblib
 import pandas as pd
 
-from src.config import MODELS_DIR
+from src.config import MODELS_DIR, PROCESSED_DATA_DIR, REPORTS_DIR
+from src.constants import ARTIFACT_FILENAMES, RISK_THRESHOLDS
 from src.logger import logger
 
 
 class ChurnPredictor:
+    """Load the trained model and pipeline to score new customer data."""
 
-    def __init__(self):
+    def __init__(self, models_dir: Path | None = None) -> None:
+        self.models_dir = models_dir or MODELS_DIR
+        self.model = self._load_artifact(ARTIFACT_FILENAMES["best_model"])
+        self.pipeline = self._load_artifact(ARTIFACT_FILENAMES["preprocessing_pipeline"])
+        self.feature_columns = self._load_optional_feature_columns()
 
-        self.model = joblib.load(
+    def _load_artifact(self, filename: str) -> Any:
+        """Load a persisted artifact from the models directory."""
 
-            MODELS_DIR /
+        path = self.models_dir / filename
+        if not path.exists():
+            raise FileNotFoundError(f"Required artifact not found: {path}")
+        return joblib.load(path)
 
-            "churn_model.pkl"
+    def _load_optional_feature_columns(self) -> list[str] | None:
+        """Load persisted feature columns when available."""
 
-        )
-
-        self.pipeline = joblib.load(
-
-            MODELS_DIR /
-
-            "preprocessing_pipeline.pkl"
-
-        )
-
-        self.feature_columns = joblib.load(
-
-            MODELS_DIR /
-
-            "feature_columns.pkl"
-
-        )
-        self.label_encoders = joblib.load(
-            MODELS_DIR / "label_encoders.pkl"
-        )
-
-        self.scaler = joblib.load(
-            MODELS_DIR / "standard_scaler.pkl"
-        )
-
-    # ==========================================================
-    # Prepare Input
-    # ==========================================================
-
-    def prepare_input(self, customer_data):
-
-        if isinstance(customer_data, dict):
-            customer_data = pd.DataFrame([customer_data])
-
-        # Encode categorical columns
-        for column, encoder in self.label_encoders.items():
-
-            if column in customer_data.columns:
-
-                customer_data[column] = encoder.transform(
-                    customer_data[column]
-                )
-
-        customer_data = customer_data.reindex(
-            columns=self.feature_columns,
-            fill_value=0,
-        )
-
-        return customer_data
-
-    # ==========================================================
-    # Predict
-    # ==========================================================
-
-    def predict(
-
-        self,
-
-        customer_data,
-
-    ):
-
-        customer_data = self.prepare_input(
-
-            customer_data
-
-        )
-
-        prediction = self.model.predict(
-
-            customer_data
-
-        )[0]
-
-        probability = self.model.predict_proba(
-
-            customer_data
-
-        )[0][1]
-
-        risk = self.risk_level(
-
-            probability
-
-        )
-
-        logger.info(
-
-            f"Prediction : {prediction}"
-
-        )
-
-        return {
-
-            "prediction": int(prediction),
-
-            "probability": round(
-
-                float(probability),
-
-                4,
-
-            ),
-
-            "risk_level": risk,
-
-        }
-
-    # ==========================================================
-    # Risk Level
-    # ==========================================================
+        path = self.models_dir / ARTIFACT_FILENAMES["feature_columns"]
+        if not path.exists():
+            return None
+        feature_columns = joblib.load(path)
+        return [str(column) for column in feature_columns]
 
     @staticmethod
-    def risk_level(probability):
+    def risk_level(probability: float) -> str:
+        """Convert a churn probability into a business risk label."""
 
-        if probability >= 0.80:
-
+        if probability >= RISK_THRESHOLDS["very_high"]:
             return "Very High"
-
-        elif probability >= 0.60:
-
+        if probability >= RISK_THRESHOLDS["high"]:
             return "High"
-
-        elif probability >= 0.40:
-
+        if probability >= RISK_THRESHOLDS["medium"]:
             return "Medium"
-
-        elif probability >= 0.20:
-
+        if probability >= RISK_THRESHOLDS["low"]:
             return "Low"
+        return "Very Low"
 
-        else:
+    @staticmethod
+    def _ensure_dataframe(customer_data: Any) -> pd.DataFrame:
+        """Normalize input data into a dataframe."""
 
-            return "Very Low"
-        
+        if isinstance(customer_data, pd.DataFrame):
+            return customer_data.copy()
+        if isinstance(customer_data, dict):
+            return pd.DataFrame([customer_data])
+        raise TypeError("Customer data must be a dictionary or pandas DataFrame")
 
-    # ==========================================================
-    # Batch Prediction
-    # ==========================================================
+    def _prepare_raw_input(self, customer_data: Any) -> pd.DataFrame:
+        """Prepare raw customer data before it enters the pipeline."""
 
-    def predict_batch(self, dataframe):
+        dataframe = self._ensure_dataframe(customer_data)
+        dataframe = dataframe.drop(columns=["Churn", "Churn_flag", "Unnamed: 0"], errors="ignore")
+        dataframe = dataframe.drop(columns=["customerID"], errors="ignore")
+        return dataframe
 
-        dataframe = self.prepare_input(dataframe)
+    def transform_input(self, customer_data: Any) -> pd.DataFrame:
+        """Transform raw input data into the model feature space."""
 
-        predictions = self.model.predict(dataframe)
+        raw_dataframe = self._prepare_raw_input(customer_data)
+        transformed = self.pipeline.transform(raw_dataframe)
 
-        probabilities = self.model.predict_proba(dataframe)[:, 1]
+        feature_names = self.feature_columns or list(self.pipeline.get_feature_names_out())
+        transformed_dataframe = pd.DataFrame(transformed, columns=feature_names, index=raw_dataframe.index)
+        return transformed_dataframe
 
-        result = dataframe.copy()
+    def predict(self, customer_data: Any) -> dict[str, Any]:
+        """Predict churn for a single customer record."""
 
-        result["Prediction"] = predictions
+        transformed = self.transform_input(customer_data)
+        prediction = int(self.model.predict(transformed)[0])
+        probability = float(self._predict_probability(transformed)[0])
+        risk = self.risk_level(probability)
 
-        result["Probability"] = probabilities.round(4)
-
-        result["Risk_Level"] = result["Probability"].apply(
-            self.risk_level
-        )
-
+        result = {
+            "prediction": prediction,
+            "probability": round(probability, 4),
+            "risk_level": risk,
+            "prediction_label": "Churn likely" if prediction == 1 else "Churn unlikely",
+        }
+        logger.info("Single prediction generated: %s", result)
         return result
 
-    # ==========================================================
-    # Save Prediction Results
-    # ==========================================================
+    def _predict_probability(self, transformed_data: pd.DataFrame) -> pd.Series:
+        """Return churn probabilities for transformed customer records."""
 
-    def save_predictions(
+        if hasattr(self.model, "predict_proba"):
+            return pd.Series(self.model.predict_proba(transformed_data)[:, 1], index=transformed_data.index)
+        if hasattr(self.model, "decision_function"):
+            scores = self.model.decision_function(transformed_data)
+            return pd.Series(scores, index=transformed_data.index)
+        return pd.Series(self.model.predict(transformed_data), index=transformed_data.index)
 
-        self,
+    def predict_batch(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        """Predict churn for a batch of customers."""
 
-        dataframe,
+        transformed = self.transform_input(dataframe)
+        predictions = self.model.predict(transformed)
+        probabilities = self._predict_probability(transformed)
 
-        filename="predictions.csv",
+        result = self._ensure_dataframe(dataframe).copy()
+        result["Prediction"] = predictions.astype(int)
+        result["Probability"] = probabilities.round(4)
+        result["Risk_Level"] = result["Probability"].apply(self.risk_level)
 
-    ):
+        if self.feature_columns is not None and len(self.feature_columns) != transformed.shape[1]:
+            logger.warning(
+                "Feature column count mismatch: saved=%s transformed=%s",
+                len(self.feature_columns),
+                transformed.shape[1],
+            )
 
-        output_path = MODELS_DIR.parent / "reports"
+        logger.info("Batch prediction completed for %s records", len(result))
+        return result
 
-        output_path.mkdir(
+    def prediction_summary(self, dataframe: pd.DataFrame) -> dict[str, Any]:
+        """Create a compact summary of the prediction output."""
 
-            parents=True,
+        summary = {
+            "total_customers": int(len(dataframe)),
+            "predicted_churn": int((dataframe["Prediction"] == 1).sum()),
+            "predicted_retained": int((dataframe["Prediction"] == 0).sum()),
+            "high_risk_customers": int((dataframe["Risk_Level"] == "Very High").sum()),
+            "average_probability": round(float(dataframe["Probability"].mean()), 4),
+        }
+        logger.info("Prediction summary: %s", summary)
+        return summary
 
-            exist_ok=True,
+    def save_predictions(self, dataframe: pd.DataFrame, filename: str | None = None) -> Path:
+        """Persist prediction results for downstream reporting."""
 
-        )
-
-        file_path = output_path / filename
-
-        dataframe.to_csv(
-
-            file_path,
-
-            index=False,
-
-        )
-
-        logger.info(
-
-            f"Predictions Saved : {file_path}"
-
-        )
-
-        return file_path
-
-    # ==========================================================
-    # High Risk Customers
-    # ==========================================================
-
-    @staticmethod
-    def high_risk_customers(
-
-        dataframe,
-
-        threshold=0.80,
-
-    ):
-
-        return dataframe[
-
-            dataframe["Probability"] >= threshold
-
-        ].sort_values(
-
-            by="Probability",
-
-            ascending=False,
-
-        )
-
-    # ==========================================================
-    # Prediction Summary
-    # ==========================================================
+        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        output_path = REPORTS_DIR / (filename or ARTIFACT_FILENAMES["predictions"])
+        dataframe.to_csv(output_path, index=False)
+        logger.info("Saved predictions to %s", output_path)
+        return output_path
 
     @staticmethod
-    def prediction_summary(dataframe):
+    def high_risk_customers(dataframe: pd.DataFrame, threshold: float = RISK_THRESHOLDS["very_high"]) -> pd.DataFrame:
+        """Return the subset of customers with the highest churn risk."""
 
-        print("\n")
+        if "Probability" not in dataframe.columns:
+            raise KeyError("Prediction dataframe must contain a Probability column")
+        return dataframe[dataframe["Probability"] >= threshold].sort_values(by="Probability", ascending=False)
 
-        print("=" * 60)
+    def predict_csv(self, csv_path: str | Path) -> pd.DataFrame:
+        """Load a CSV file and generate batch predictions."""
 
-        print("Prediction Summary")
+        csv_file = Path(csv_path)
+        if not csv_file.exists():
+            raise FileNotFoundError(f"Prediction input file not found: {csv_file}")
 
-        print("=" * 60)
-
-        print(
-
-            dataframe["Risk_Level"]
-
-            .value_counts()
-
-        )
-
-        print()
-
-        print(
-
-            dataframe["Prediction"]
-
-            .value_counts()
-
-        )
-
-    # ==========================================================
-    # Predict CSV File
-    # ==========================================================
-
-    def predict_csv(
-
-        self,
-
-        csv_path,
-
-    ):
-
-        logger.info(
-
-            f"Loading : {csv_path}"
-
-        )
-
-        df = pd.read_csv(
-
-            csv_path
-
-        )
-
-        predictions = self.predict_batch(
-
-            df
-
-        )
-
-        self.prediction_summary(
-
-            predictions
-
-        )
-
-        self.save_predictions(
-
-            predictions
-
-        )
-
+        dataframe = pd.read_csv(csv_file)
+        predictions = self.predict_batch(dataframe)
+        self.save_predictions(predictions)
+        self.prediction_summary(predictions)
+        logger.info("Generated predictions for CSV input: %s", csv_file)
         return predictions
 
 
-# ==========================================================
-# Main
-# ==========================================================
-
 if __name__ == "__main__":
-
     predictor = ChurnPredictor()
-
     sample = {
-
         "gender": "Female",
-
         "SeniorCitizen": 0,
-
         "Partner": "Yes",
-
         "Dependents": "No",
-
         "tenure": 10,
-
         "PhoneService": "Yes",
-
         "MultipleLines": "No",
-
         "InternetService": "Fiber optic",
-
         "OnlineSecurity": "No",
-
         "OnlineBackup": "Yes",
-
         "DeviceProtection": "No",
-
         "TechSupport": "No",
-
         "StreamingTV": "Yes",
-
-        "StreamingMovies": "Yes",
-
+        "StreamingMovies": "No",
         "Contract": "Month-to-month",
-
         "PaperlessBilling": "Yes",
-
         "PaymentMethod": "Electronic check",
-
-        "MonthlyCharges": 89.35,
-
-        "TotalCharges": 893.50,
-
+        "MonthlyCharges": 80.0,
+        "TotalCharges": 800.0,
     }
-
-    result = predictor.predict(sample)
-
-    print("\n")
-
-    print("=" * 60)
-
-    print("Prediction Result")
-
-    print("=" * 60)
-
-    print(result)        
+    print(predictor.predict(sample))

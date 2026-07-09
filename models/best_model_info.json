@@ -1,5 +1,6 @@
 {
-    "best_model": "CatBoost",
-    "accuracy": 0.8028,
-    "roc_auc": 0.859
+    "best_model": "Gradient Boosting",
+    "accuracy": 0.7998,
+    "roc_auc": 0.854,
+    "timestamp_utc": "2026-07-09T08:24:54.106568+00:00"
 }

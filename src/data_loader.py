@@ -1,301 +1,167 @@
-"""
-Project      : Decision Intelligence Platform
-Module       : data_loader.py
-Author       : Likitha Rai
+"""Load and clean the raw Telco churn dataset."""
 
-Description:
-Loads, validates and cleans the Telco Customer Churn dataset.
-"""
+from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
-from src.config import RAW_DATA_DIR, PROCESSED_DATA_DIR
+from src.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
+from src.constants import TARGET_COLUMN, TARGET_LABEL_COLUMN
 from src.logger import logger
 
 
 class DataLoader:
+    """Load, validate, and standardize the raw churn dataset."""
 
-    def __init__(self):
-
-        self.input_file = RAW_DATA_DIR / "telco_churn.csv"
-
-        self.output_file = PROCESSED_DATA_DIR / "cleaned_telco.csv"
-
-    # ==========================================================
-    # Load Dataset
-    # ==========================================================
+    def __init__(
+        self,
+        input_file: Path | None = None,
+        output_file: Path | None = None,
+    ) -> None:
+        self.input_file = input_file or (RAW_DATA_DIR / "telco_churn.csv")
+        self.output_file = output_file or (PROCESSED_DATA_DIR / "cleaned_telco.csv")
 
     def load_dataset(self) -> pd.DataFrame:
+        """Load the raw dataset from disk."""
 
-        logger.info("Loading dataset...")
+        if not self.input_file.exists():
+            raise FileNotFoundError(f"Raw dataset not found: {self.input_file}")
 
-        df = pd.read_csv(self.input_file)
-
-        logger.info(f"Dataset Loaded : {df.shape}")
-
-        return df
-
-    # ==========================================================
-    # Dataset Summary
-    # ==========================================================
+        logger.info("Loading raw churn dataset from %s", self.input_file)
+        return pd.read_csv(self.input_file)
 
     @staticmethod
-    def dataset_summary(df):
+    def dataset_summary(df: pd.DataFrame) -> dict[str, Any]:
+        """Return a compact summary of the dataset."""
 
-        print("\n================ Dataset Summary ================\n")
-
-        print(df.info())
-
-        print("\nShape")
-
-        print(df.shape)
-
-        print("\nColumns")
-
-        print(df.columns.tolist())
-
-    # ==========================================================
-    # Missing Values
-    # ==========================================================
+        summary = {
+            "shape": df.shape,
+            "columns": df.columns.tolist(),
+            "dtypes": df.dtypes.astype(str).to_dict(),
+            "missing_values": df.isna().sum().to_dict(),
+        }
+        logger.info("Dataset summary: %s", summary)
+        return summary
 
     @staticmethod
-    def missing_values(df):
-
-        missing = pd.DataFrame({
-
-            "Missing Values": df.isnull().sum(),
-
-            "Percentage": round(
-
-                df.isnull().mean() * 100,
-
-                2
-
-            )
-
-        })
-
-        missing = missing[missing["Missing Values"] > 0]
-
-        print("\nMissing Values")
-
-        print(missing)
-
-        return missing
-
-    # ==========================================================
-    # Duplicate Records
-    # ==========================================================
-
-    @staticmethod
-    def remove_duplicates(df):
+    def remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
+        """Remove duplicate rows and log how many were dropped."""
 
         before = len(df)
-
-        df = df.drop_duplicates()
-
-        after = len(df)
-
-        logger.info(f"Duplicates Removed : {before-after}")
-
-        return df
-
-    # ==========================================================
-    # Convert TotalCharges
-    # ==========================================================
+        cleaned_df = df.drop_duplicates().copy()
+        logger.info("Removed %s duplicate rows", before - len(cleaned_df))
+        return cleaned_df
 
     @staticmethod
-    def convert_total_charges(df):
+    def convert_total_charges(df: pd.DataFrame) -> pd.DataFrame:
+        """Convert the TotalCharges column to numeric and impute missing values."""
 
-        df["TotalCharges"] = pd.to_numeric(
-
-            df["TotalCharges"],
-
-            errors="coerce"
-
-        )
-
-        df["TotalCharges"] = df["TotalCharges"].fillna(
-
-            df["TotalCharges"].median()
-
-        )
-
-        return df
-
-    # ==========================================================
-    # Clean Categorical Columns
-    # ==========================================================
+        cleaned_df = df.copy()
+        if "TotalCharges" in cleaned_df.columns:
+            cleaned_df["TotalCharges"] = pd.to_numeric(
+                cleaned_df["TotalCharges"],
+                errors="coerce",
+            )
+            cleaned_df["TotalCharges"] = cleaned_df["TotalCharges"].fillna(
+                cleaned_df["TotalCharges"].median(),
+            )
+        return cleaned_df
 
     @staticmethod
-    def clean_categorical_columns(df):
+    def clean_categorical_columns(df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize categorical values to a consistent representation."""
 
-        columns = [
-
-            "SeniorCitizen",
-
-            "Partner",
-
-            "Dependents",
-
-            "PhoneService",
-
-            "MultipleLines",
-
-            "OnlineSecurity",
-
-            "OnlineBackup",
-
-            "DeviceProtection",
-
-            "TechSupport",
-
-            "StreamingTV",
-
-            "StreamingMovies",
-
-            "PaperlessBilling",
-
-            "Churn"
-
-        ]
-
+        cleaned_df = df.copy()
         replacements = {
-
             "True": "Yes",
-
             "False": "No",
-
             "1": "Yes",
-
             "0": "No",
-
             "No internet service": "No",
-
-            "No phone service": "No"
-
+            "No phone service": "No",
         }
 
-        for col in columns:
+        categorical_columns = [
+            "Partner",
+            "Dependents",
+            "PhoneService",
+            "MultipleLines",
+            "OnlineSecurity",
+            "OnlineBackup",
+            "DeviceProtection",
+            "TechSupport",
+            "StreamingTV",
+            "StreamingMovies",
+            "PaperlessBilling",
+            TARGET_LABEL_COLUMN,
+        ]
 
-            if col in df.columns:
+        for column in categorical_columns:
+            if column in cleaned_df.columns:
+                cleaned_df[column] = cleaned_df[column].replace(replacements)
 
-                df[col] = df[col].replace(replacements)
-
-        return df
-
-    # ==========================================================
-    # Validate Numeric Columns
-    # ==========================================================
+        return cleaned_df
 
     @staticmethod
-    def validate_numeric_columns(df):
+    def validate_numeric_columns(df: pd.DataFrame) -> None:
+        """Log negative values in numeric columns if present."""
 
-        numeric_columns = df.select_dtypes(
-
-            include=["number"]
-
-        ).columns
-
-        for col in numeric_columns:
-
-            invalid = df[df[col] < 0]
-
-            if not invalid.empty:
-
+        for column in df.select_dtypes(include=["number"]).columns:
+            invalid_rows = df[df[column] < 0]
+            if not invalid_rows.empty:
                 logger.warning(
-
-                    f"{len(invalid)} invalid values found in {col}"
-
+                    "Found %s negative values in %s",
+                    len(invalid_rows),
+                    column,
                 )
 
-    # ==========================================================
-    # Target Column
-    # ==========================================================
-
     @staticmethod
-    def create_target(df):
+    def create_target(df: pd.DataFrame) -> pd.DataFrame:
+        """Create the binary churn flag used for model training."""
 
-        df["Churn_flag"] = df["Churn"].map({
+        if TARGET_LABEL_COLUMN not in df.columns:
+            raise KeyError(f"Missing target label column: {TARGET_LABEL_COLUMN}")
 
-            "Yes": 1,
+        cleaned_df = df.copy()
+        cleaned_df[TARGET_COLUMN] = cleaned_df[TARGET_LABEL_COLUMN].map({"Yes": 1, "No": 0})
+        if cleaned_df[TARGET_COLUMN].isna().any():
+            raise ValueError("Unable to derive churn target from raw labels")
 
-            "No": 0
+        drop_columns = [column for column in ("Unnamed: 0",) if column in cleaned_df.columns]
+        if drop_columns:
+            cleaned_df = cleaned_df.drop(columns=drop_columns)
 
-        })
+        return cleaned_df
 
-        return df
-    
-        # Remove unwanted columns
-        drop_columns = ["Unnamed: 0"]
+    def save_dataset(self, df: pd.DataFrame) -> None:
+        """Persist the cleaned dataset to the processed directory."""
 
-        for col in drop_columns:
-            if col in df.columns:
-                df.drop(columns=col, inplace=True)
+        PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        df.to_csv(self.output_file, index=False)
+        logger.info("Saved cleaned dataset to %s", self.output_file)
 
-    # ==========================================================
-    # Save Dataset
-    # ==========================================================
+    def run(self) -> pd.DataFrame:
+        """Execute the full cleaning workflow."""
 
-    def save_dataset(self, df):
-
-        PROCESSED_DATA_DIR.mkdir(
-
-            parents=True,
-
-            exist_ok=True
-
-        )
-
-        df.to_csv(
-
-            self.output_file,
-
-            index=False
-
-        )
-
-        logger.info(
-
-            f"Clean Dataset Saved : {self.output_file}"
-
-        )
-
-    # ==========================================================
-    # Complete Pipeline
-    # ==========================================================
-
-    def run(self):
-
-        df = self.load_dataset()
-
-        self.dataset_summary(df)
-
-        self.missing_values(df)
-
-        df = self.remove_duplicates(df)
-
-        df = self.convert_total_charges(df)
-
-        df = self.clean_categorical_columns(df)
-
-        self.validate_numeric_columns(df)
-
-        df = self.create_target(df)
-
-        self.save_dataset(df)
-
-        print("\nDataset preprocessing completed successfully.")
-
-        return df
+        try:
+            df = self.load_dataset()
+            self.dataset_summary(df)
+            df = self.remove_duplicates(df)
+            df = self.convert_total_charges(df)
+            df = self.clean_categorical_columns(df)
+            self.validate_numeric_columns(df)
+            df = self.create_target(df)
+            self.save_dataset(df)
+            logger.info("Dataset preprocessing completed successfully")
+            return df
+        except Exception as exc:
+            logger.exception("Failed to clean the raw dataset")
+            raise RuntimeError("Dataset cleaning failed") from exc
 
 
 if __name__ == "__main__":
-
     loader = DataLoader()
-
     cleaned_df = loader.run()
-
     print(cleaned_df.head())

@@ -1,9 +1,8 @@
 {
-    "iterations": 525,
-    "depth": 4,
-    "learning_rate": 0.014213495530252359,
-    "l2_leaf_reg": 3.3666984991414517,
-    "random_strength": 4.240407231011749,
-    "bagging_temperature": 4.042789328396113,
-    "border_count": 215
+    "n_estimators": 380,
+    "learning_rate": 0.02205253848539252,
+    "max_depth": 2,
+    "min_samples_split": 8,
+    "min_samples_leaf": 7,
+    "subsample": 0.6488102966320539
 }

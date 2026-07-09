@@ -1,122 +1,125 @@
+"""Streamlit entrypoint for the decision intelligence platform home page."""
+
 from __future__ import annotations
 
-import pathlib
-import sys
+import json
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1] / "Customer-Churn-Demand-Prediction-Using-ML"
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-from model_pipeline import MODEL_PATH, load_model, load_data, get_top_features
-
-DATA_PATH = PROJECT_ROOT / "Data" / "cleaned_telco.csv"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def build_input_row() -> pd.DataFrame:
-    st.sidebar.header("Customer profile")
-    data = {
-        "gender": st.sidebar.selectbox("Gender", ["Female", "Male"]),
-        "SeniorCitizen": st.sidebar.selectbox("Senior citizen", ["No", "Yes"]),
-        "Partner": st.sidebar.selectbox("Partner", ["No", "Yes"]),
-        "Dependents": st.sidebar.selectbox("Dependents", ["No", "Yes"]),
-        "tenure": st.sidebar.slider("Tenure (months)", 0, 72, 12),
-        "PhoneService": st.sidebar.selectbox("Phone service", ["No", "Yes"]),
-        "MultipleLines": st.sidebar.selectbox(
-            "Multiple lines", ["No", "Yes", "No phone service"]
-        ),
-        "InternetService": st.sidebar.selectbox(
-            "Internet service", ["DSL", "Fiber optic", "No"]
-        ),
-        "OnlineSecurity": st.sidebar.selectbox(
-            "Online security", ["No", "Yes", "No internet service"]
-        ),
-        "OnlineBackup": st.sidebar.selectbox(
-            "Online backup", ["No", "Yes", "No internet service"]
-        ),
-        "DeviceProtection": st.sidebar.selectbox(
-            "Device protection", ["No", "Yes", "No internet service"]
-        ),
-        "TechSupport": st.sidebar.selectbox(
-            "Tech support", ["No", "Yes", "No internet service"]
-        ),
-        "StreamingTV": st.sidebar.selectbox(
-            "Streaming TV", ["No", "Yes", "No internet service"]
-        ),
-        "StreamingMovies": st.sidebar.selectbox(
-            "Streaming movies", ["No", "Yes", "No internet service"]
-        ),
-        "Contract": st.sidebar.selectbox(
-            "Contract", ["Month-to-month", "One year", "Two year"]
-        ),
-        "PaperlessBilling": st.sidebar.selectbox("Paperless billing", ["No", "Yes"]),
-        "PaymentMethod": st.sidebar.selectbox(
-            "Payment method",
-            [
-                "Electronic check",
-                "Mailed check",
-                "Bank transfer (automatic)",
-                "Credit card (automatic)",
-            ],
-        ),
-        "MonthlyCharges": st.sidebar.number_input(
-            "Monthly charges", min_value=0.0, max_value=2000.0, value=50.0, step=0.1
-        ),
-        "TotalCharges": st.sidebar.number_input(
-            "Total charges", min_value=0.0, max_value=50000.0, value=1000.0, step=1.0
-        ),
-    }
-    return pd.DataFrame([data])
+def load_json(path: Path) -> dict[str, object]:
+    """Load a JSON file if it exists."""
+
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_dataframe(path: Path) -> pd.DataFrame | None:
+    """Load a CSV file if it exists."""
+
+    if not path.exists():
+        return None
+    return pd.read_csv(path)
+
+
+def metric_card(label: str, value: str) -> None:
+    """Render a small KPI card using Streamlit markdown."""
+
+    st.markdown(
+        f"""
+        <div style="padding: 1rem; border-radius: 1rem; background: linear-gradient(135deg, #0f172a, #1e293b); color: white;">
+            <div style="font-size: 0.85rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.08em;">{label}</div>
+            <div style="font-size: 1.6rem; font-weight: 700; margin-top: 0.35rem;">{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def main() -> None:
-    st.set_page_config(page_title="Telecom Churn Predictor", layout="wide")
-    st.title("📊 Telecom Customer Churn Prediction")
+    """Render the platform home page."""
+
+    st.set_page_config(page_title="Decision Intelligence Platform", layout="wide")
     st.markdown(
-        "Use the sidebar to create a customer profile and predict churn risk with a trained LightGBM model."
+        """
+        <style>
+        .hero {
+            padding: 2rem;
+            border-radius: 1.5rem;
+            background: linear-gradient(135deg, #07111f 0%, #0f766e 55%, #134e4a 100%);
+            color: white;
+        }
+        .hero h1 { margin-bottom: 0.25rem; }
+        .hero p { margin-top: 0; opacity: 0.85; font-size: 1.05rem; }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
 
-    model = None
-    if MODEL_PATH.exists():
-        model = load_model(MODEL_PATH)
+    st.markdown(
+        """
+        <div class="hero">
+            <h1>Decision Intelligence Platform</h1>
+            <p>Enterprise churn prediction, revenue risk analysis, explainability, and retention actions in one workflow.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    left, middle, right = st.columns(3)
+    metrics = load_json(PROJECT_ROOT / "reports" / "executive_kpis.json")
+    model_info = load_json(PROJECT_ROOT / "models" / "best_model_info.json")
+    evaluation_metrics = load_json(PROJECT_ROOT / "reports" / "evaluation_metrics.json")
+
+    with left:
+        metric_card("Total Customers", str(metrics.get("Total Customers", "-")))
+    with middle:
+        metric_card("Revenue At Risk", str(metrics.get("Revenue At Risk", "-")))
+    with right:
+        metric_card("Best Model", str(model_info.get("best_model", "-")))
+
+    st.write("")
+    performance, business = st.columns(2)
+
+    with performance:
+        st.subheader("Model Snapshot")
+        if evaluation_metrics:
+            perf_df = pd.DataFrame([evaluation_metrics])
+            st.dataframe(perf_df, width="stretch")
+        else:
+            st.info("Run training and evaluation to populate model metrics.")
+
+    with business:
+        st.subheader("Business Snapshot")
+        if metrics:
+            st.dataframe(pd.DataFrame([metrics]), width="stretch")
+        else:
+            st.info("Run revenue-risk analysis to populate executive KPIs.")
+
+    st.subheader("Operational Artifacts")
+    artifact_table = pd.DataFrame(
+        [
+            {"Artifact": "Best Model", "Path": "models/best_model.pkl"},
+            {"Artifact": "Model Metrics", "Path": "models/model_metrics.csv"},
+            {"Artifact": "Evaluation Metrics", "Path": "reports/evaluation_metrics.json"},
+            {"Artifact": "Revenue Risk Summary", "Path": "reports/revenue_risk_summary.csv"},
+            {"Artifact": "SHAP Feature Importance", "Path": "reports/shap_feature_importance.csv"},
+        ]
+    )
+    st.dataframe(artifact_table, width="stretch", hide_index=True)
+
+    st.subheader("Dataset Preview")
+    cleaned_data = load_dataframe(PROJECT_ROOT / "Data" / "processed" / "cleaned_telco.csv")
+    if cleaned_data is not None:
+        st.dataframe(cleaned_data.head(10), width="stretch")
     else:
-        st.warning(
-            "No trained model found. Run `python train_model.py` in this folder first."
-        )
-
-    input_df = build_input_row()
-    st.subheader("Current customer profile")
-    st.dataframe(input_df.T, use_container_width=True)
-
-    if st.button("Predict churn risk"):
-        if model is None:
-            st.error("Model not available yet. Train the model and refresh the app.")
-            return
-
-        prediction = model.predict(input_df)[0]
-        probability = model.predict_proba(input_df)[0, 1]
-        label = "Churn likely" if prediction == 1 else "Churn unlikely"
-        st.metric("Prediction", label, delta=f"{probability:.1%} probability")
-
-        st.markdown("### Risk details")
-        st.write(
-            "This model uses a LightGBM classifier with engineered preprocessing for telecom churn data."
-        )
-
-        if hasattr(model.named_steps["classifier"], "feature_importances_"):
-            top_features = get_top_features(model, top_n=8)
-            importance_df = pd.DataFrame(
-                top_features, columns=["Feature", "Importance"]
-            )
-            st.write("#### Top model drivers")
-            st.dataframe(importance_df, use_container_width=True)
-
-
-    if st.button("Show dataset sample"):
-        df = load_data(DATA_PATH)
-        st.write(df.head(10))
+        st.info("Cleaned dataset not found yet.")
 
 
 if __name__ == "__main__":

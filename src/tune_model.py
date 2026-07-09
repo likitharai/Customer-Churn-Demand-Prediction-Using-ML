@@ -1,483 +1,194 @@
-"""
-Project      : Decision Intelligence Platform
-Module       : tune_model.py
-Author       : Likitha Rai
+"""Tune the selected best model with Optuna and persist the results."""
 
-Description:
-Hyperparameter tuning using Optuna.
-"""
+from __future__ import annotations
 
 import json
+from pathlib import Path
+from typing import Any
+
 import joblib
 import optuna
 import pandas as pd
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 
-from catboost import CatBoostClassifier
-
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import (
-    StratifiedKFold,
-    cross_val_score,
-)
-
-from src.config import (
-    MODELS_DIR,
-    PROCESSED_DATA_DIR,
-)
-
-from src.constants import (
-    RANDOM_STATE,
-    CV_FOLDS,
-    N_TRIALS,
-)
-
+from src.config import MODELS_DIR, PROCESSED_DATA_DIR
+from src.constants import ARTIFACT_FILENAMES, CV_FOLDS, N_TRIALS, RANDOM_STATE
 from src.logger import logger
+from src.model_config import ModelFactory
 
 
 class HyperparameterTuner:
+    """Optimize the selected model using Optuna and stratified cross-validation."""
 
-    def __init__(self):
-
+    def __init__(self, data_dir: Path | None = None, models_dir: Path | None = None) -> None:
+        self.data_dir = data_dir or PROCESSED_DATA_DIR
+        self.models_dir = models_dir or MODELS_DIR
+        self.best_model_name = self._load_best_model_name()
+        self.best_params: dict[str, Any] | None = None
+        self.study: optuna.Study | None = None
         self.best_model = None
 
-        self.best_params = None
+    def _load_best_model_name(self) -> str:
+        """Load the model name saved by the training stage."""
 
-        self.study = None
+        info_path = self.models_dir / ARTIFACT_FILENAMES["best_model_info"]
+        if not info_path.exists():
+            raise FileNotFoundError(
+                f"Best model metadata not found: {info_path}. Run training first."
+            )
 
-    # ==========================================================
-    # Load Dataset
-    # ==========================================================
+        with info_path.open("r", encoding="utf-8") as file:
+            info = json.load(file)
 
-    def load_data(self):
+        best_model_name = info.get("best_model")
+        if not best_model_name:
+            raise ValueError("Best model metadata does not contain a model name")
 
-        logger.info("Loading processed dataset...")
+        logger.info("Loaded best model name: %s", best_model_name)
+        return str(best_model_name)
 
-        X_train = pd.read_csv(
+    def load_data(self) -> tuple[pd.DataFrame, pd.Series]:
+        """Load the processed training split used for optimization."""
 
-            PROCESSED_DATA_DIR /
+        x_train_path = self.data_dir / "x_train.csv"
+        y_train_path = self.data_dir / "y_train.csv"
 
-            "x_train.csv"
+        if not x_train_path.exists() or not y_train_path.exists():
+            raise FileNotFoundError("Processed training data not found. Run preprocessing first.")
 
-        )
+        X_train = pd.read_csv(x_train_path)
+        y_train = pd.read_csv(y_train_path).iloc[:, 0]
+        logger.info("Loaded tuning data: X=%s, y=%s", X_train.shape, y_train.shape)
+        return X_train, y_train
 
-        y_train = pd.read_csv(
-
-            PROCESSED_DATA_DIR /
-
-            "y_train.csv"
-
-        ).values.ravel()
-
-        logger.info(
-
-            f"Training Shape : {X_train.shape}"
-
-        )
-
-        return (
-
-            X_train,
-
-            y_train,
-
-        )
-
-    # ==========================================================
-    # Objective Function
-    # ==========================================================
-
-    def objective(self, trial):
+    def objective(self, trial: optuna.Trial) -> float:
+        """Optuna objective that maximizes ROC AUC."""
 
         X_train, y_train = self.load_data()
-
-        params = {
-
-            "iterations": trial.suggest_int(
-                "iterations",
-                200,
-                1000,
-            ),
-
-            "depth": trial.suggest_int(
-                "depth",
-                4,
-                10,
-            ),
-
-            "learning_rate": trial.suggest_float(
-                "learning_rate",
-                0.01,
-                0.3,
-                log=True,
-            ),
-
-            "l2_leaf_reg": trial.suggest_float(
-                "l2_leaf_reg",
-                1,
-                10,
-            ),
-
-            "random_strength": trial.suggest_float(
-                "random_strength",
-                0.1,
-                10,
-            ),
-
-            "bagging_temperature": trial.suggest_float(
-                "bagging_temperature",
-                0,
-                10,
-            ),
-
-            "border_count": trial.suggest_int(
-                "border_count",
-                32,
-                255,
-            ),
-
-            "loss_function": "Logloss",
-
-            "eval_metric": "AUC",
-
-            "random_state": RANDOM_STATE,
-
-            "verbose": False,
-
-        }
-
-        model = CatBoostClassifier(
-            **params
-        )
+        params = ModelFactory.suggest_params(trial, self.best_model_name)
+        model = ModelFactory.create_model(self.best_model_name, params)
 
         cv = StratifiedKFold(
-
             n_splits=CV_FOLDS,
-
             shuffle=True,
-
             random_state=RANDOM_STATE,
-
         )
+        scores = cross_val_score(model, X_train, y_train, cv=cv, scoring="roc_auc")
+        return float(scores.mean())
 
-        score = cross_val_score(
+    def optimize(self) -> dict[str, Any]:
+        """Run the Optuna study and store the best parameter set."""
 
-            model,
-
-            X_train,
-
-            y_train,
-
-            cv=cv,
-
-            scoring="roc_auc",
-
-        )
-
-        return score.mean()
-    
-    # ==========================================================
-    # Run Optuna Study
-    # ==========================================================
-
-    def optimize(self):
-
-        sampler = optuna.samplers.TPESampler(
-
-            seed=RANDOM_STATE
-
-        )
-
+        sampler = optuna.samplers.TPESampler(seed=RANDOM_STATE)
         pruner = optuna.pruners.MedianPruner()
 
         self.study = optuna.create_study(
-
             direction="maximize",
-
             sampler=sampler,
-
             pruner=pruner,
-
-            study_name="CatBoost Optimization",
-
+            study_name=f"{self.best_model_name} Optimization",
         )
+        self.study.optimize(self.objective, n_trials=N_TRIALS, show_progress_bar=False)
+        self.best_params = dict(self.study.best_params)
 
-        self.study.optimize(
-
-            self.objective,
-
-            n_trials=N_TRIALS,
-
-            show_progress_bar=True,
-
+        logger.info(
+            "Optuna completed for %s with best ROC AUC %.4f",
+            self.best_model_name,
+            self.study.best_value,
         )
-
-        self.best_params = self.study.best_params
-
-        print("\n")
-
-        print("=" * 80)
-
-        print("Best ROC-AUC")
-
-        print(self.study.best_value)
-
-        print("\n")
-
-        print(self.best_params)
-
         return self.best_params
 
-    # ==========================================================
-    # Train Best Model
-    # ==========================================================
+    def train_best_model(self) -> Any:
+        """Fit the selected model using the best Optuna parameters."""
 
-    def train_best_model(self):
+        if self.best_params is None:
+            raise RuntimeError("Best parameters are not available")
 
         X_train, y_train = self.load_data()
-
-        logger.info("Training Optimized CatBoost...")
-
-        self.best_model = CatBoostClassifier(
-
-            **self.best_params,
-
-            loss_function="Logloss",
-
-            eval_metric="AUC",
-
-            random_state=RANDOM_STATE,
-
-            verbose=False,
-
-        )
-
-        self.best_model.fit(
-
-            X_train,
-
-            y_train,
-
-        )
-
-        logger.info("Training Completed.")
-
+        self.best_model = ModelFactory.create_model(self.best_model_name, self.best_params)
+        self.best_model.fit(X_train, y_train)
+        logger.info("Trained tuned model for %s", self.best_model_name)
         return self.best_model
 
-    # ==========================================================
-    # Save Best Model
-    # ==========================================================
+    def save_best_model(self) -> Path:
+        """Persist the tuned model as the production best model artifact."""
 
-    def save_best_model(self):
+        if self.best_model is None:
+            raise RuntimeError("Best model is not available")
 
-        MODELS_DIR.mkdir(
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        model_path = self.models_dir / ARTIFACT_FILENAMES["best_model"]
+        joblib.dump(self.best_model, model_path)
+        logger.info("Saved tuned model to %s", model_path)
+        return model_path
 
-            parents=True,
+    def save_best_params(self) -> Path:
+        """Persist the best hyperparameters selected by Optuna."""
 
-            exist_ok=True,
+        if self.best_params is None:
+            raise RuntimeError("Best parameters are not available")
 
-        )
+        params_path = self.models_dir / ARTIFACT_FILENAMES["best_params"]
+        with params_path.open("w", encoding="utf-8") as file:
+            json.dump(self.best_params, file, indent=4)
 
-        model_path = (
+        logger.info("Saved best parameters to %s", params_path)
+        return params_path
 
-            MODELS_DIR /
+    def save_study(self) -> Path:
+        """Persist the full Optuna study object."""
 
-            "best_model.pkl"
+        if self.study is None:
+            raise RuntimeError("Optuna study is not available")
 
-        )
+        study_path = self.models_dir / ARTIFACT_FILENAMES["study"]
+        joblib.dump(self.study, study_path)
+        logger.info("Saved study to %s", study_path)
+        return study_path
 
-        joblib.dump(
+    def save_optimization_history(self) -> Path:
+        """Persist the trial history for auditing and review."""
 
-            self.best_model,
+        if self.study is None:
+            raise RuntimeError("Optuna study is not available")
 
-            model_path,
-
-        )
-
-        logger.info(
-
-            f"Best Model Saved : {model_path}"
-
-        )
-
-    # ==========================================================
-    # Save Best Parameters
-    # ==========================================================
-
-    def save_best_params(self):
-
-        params_path = (
-
-            MODELS_DIR /
-
-            "best_params.json"
-
-        )
-
-        with open(
-
-            params_path,
-
-            "w",
-
-        ) as file:
-
-            json.dump(
-
-                self.best_params,
-
-                file,
-
-                indent=4,
-
-            )
-
-        logger.info(
-
-            f"Best Parameters Saved : {params_path}"
-
-        )
-
-    # ==========================================================
-    # Save Study
-    # ==========================================================
-
-    def save_study(self):
-
-        study_path = (
-
-            MODELS_DIR /
-
-            "study.pkl"
-
-        )
-
-        joblib.dump(
-
-            self.study,
-
-            study_path,
-
-        )
-
-        logger.info(
-
-            f"Study Saved : {study_path}"
-
-        )
-
-    # ==========================================================
-    # Save Optimization History
-    # ==========================================================
-
-    def save_optimization_history(self):
-
+        history_path = self.models_dir / ARTIFACT_FILENAMES["optimization_history"]
         history = self.study.trials_dataframe()
+        history.to_csv(history_path, index=False)
+        logger.info("Saved optimization history to %s", history_path)
+        return history_path
 
-        history_path = (
+    def display_results(self) -> None:
+        """Log the final tuning summary."""
 
-            MODELS_DIR /
+        if self.study is None or self.best_params is None:
+            raise RuntimeError("Tuning results are not available")
 
-            "optimization_history.csv"
+        logger.info("Best ROC AUC for %s: %.4f", self.best_model_name, self.study.best_value)
+        logger.info("Best parameters: %s", self.best_params)
 
-        )
+    def run(self) -> dict[str, Any]:
+        """Execute the full tuning workflow and persist artifacts."""
 
-        history.to_csv(
+        try:
+            self.optimize()
+            self.train_best_model()
+            self.save_best_model()
+            self.save_best_params()
+            self.save_study()
+            self.save_optimization_history()
+            self.display_results()
+            logger.info("Optuna tuning completed successfully")
+            return {
+                "best_model_name": self.best_model_name,
+                "best_params": self.best_params,
+                "study_value": self.study.best_value if self.study else None,
+            }
+        except Exception as exc:
+            logger.exception("Optuna tuning failed")
+            raise RuntimeError("Hyperparameter tuning pipeline failed") from exc
 
-            history_path,
-
-            index=False,
-
-        )
-
-        logger.info(
-
-            f"Optimization History Saved : {history_path}"
-
-        )
-
-    # ==========================================================
-    # Display Results
-    # ==========================================================
-
-    def display_results(self):
-
-        print("\n")
-
-        print("=" * 80)
-
-        print("OPTUNA HYPERPARAMETER TUNING")
-
-        print("=" * 80)
-
-        print(f"Best ROC-AUC : {self.study.best_value:.4f}")
-
-        print("\n")
-
-        print("Best Parameters")
-
-        print("-" * 80)
-
-        for key, value in self.best_params.items():
-
-            print(f"{key:25} : {value}")
-
-        print("=" * 80)
-
-    # ==========================================================
-    # Run Complete Pipeline
-    # ==========================================================
-
-    def run(self):
-
-        self.optimize()
-
-        self.train_best_model()
-
-        self.save_best_model()
-
-        self.save_best_params()
-
-        self.save_study()
-
-        self.save_optimization_history()
-
-        self.display_results()
-
-        logger.info("=" * 80)
-
-        logger.info("OPTUNA TUNING COMPLETED")
-
-        logger.info("=" * 80)
-
-        print("\n")
-
-        print("=" * 80)
-
-        print("OPTUNA TUNING COMPLETED SUCCESSFULLY")
-
-        print("=" * 80)
-
-        print()
-
-        print("Generated Files")
-
-        print("-------------------------------")
-
-        print("✔ best_model.pkl")
-
-        print("✔ best_params.json")
-
-        print("✔ study.pkl")
-
-        print("✔ optimization_history.csv")
-
-
-# ==========================================================
-# Main
-# ==========================================================
 
 if __name__ == "__main__":
-
     tuner = HyperparameterTuner()
-
-    tuner.run()            
+    tuner.run()
