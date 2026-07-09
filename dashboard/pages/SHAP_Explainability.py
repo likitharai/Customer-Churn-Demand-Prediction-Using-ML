@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+# Ensure project root is on sys.path so `src.*` imports resolve correctly
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import pandas as pd
 import streamlit as st
@@ -39,12 +43,12 @@ def main() -> None:
         path = shap_dir / filename
         if path.exists():
             st.subheader(title)
-            st.image(str(path), width="stretch")
+            st.image(str(path), use_container_width=True)
 
     feature_importance = REPORTS_DIR / "shap_feature_importance.csv"
     if feature_importance.exists():
         st.subheader("SHAP Feature Importance")
-        st.dataframe(pd.read_csv(feature_importance), width="stretch")
+        st.dataframe(pd.read_csv(feature_importance), use_container_width=True)
 
 
 if __name__ == "__main__":

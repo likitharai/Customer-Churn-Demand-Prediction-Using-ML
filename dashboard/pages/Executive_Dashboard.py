@@ -40,7 +40,7 @@ def main() -> None:
 		kpi_columns = st.columns(4)
 		kpi_items = list(kpis.items())
 		for column, (label, value) in zip(kpi_columns, kpi_items[:4]):
-			column.metric(label, value)
+			column.metric(str(label), str(value))
 
 	summary_path = REPORTS_DIR / "revenue_risk_summary.csv"
 	if summary_path.exists():
