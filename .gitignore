@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+venv_ml/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.env
+.env.local
+
+# Data & Models
+data/raw/*.csv
+data/processed/*.csv
+data/resampled/*.csv
+*.pkl
+!ml_pipeline/models/.gitkeep
+
+# Reports (generated)
+reports/*.csv
+reports/*.json
+reports/*.png
+reports/shap/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Docker
+.docker/
