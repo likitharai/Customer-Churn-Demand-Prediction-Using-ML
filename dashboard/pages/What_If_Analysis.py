@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Ensure project root is on sys.path so `src.*` imports resolve correctly
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import pandas as pd
 import streamlit as st
 from streamlit import runtime
@@ -59,7 +65,7 @@ def main() -> None:
 		recommendation = recommendation_engine.generate_recommendations(enriched)
 
 		st.metric("Prediction", prediction["prediction_label"], delta=f"{prediction['probability']:.1%}")
-		st.dataframe(recommendation, width="stretch")
+		st.dataframe(recommendation, use_container_width=True)
 
 
 if __name__ == "__main__":

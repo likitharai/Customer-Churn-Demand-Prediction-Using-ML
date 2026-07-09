@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+# Ensure project root is on sys.path so `src.*` imports resolve correctly
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import pandas as pd
 import streamlit as st
@@ -49,13 +53,14 @@ def main() -> None:
 	}
 
 	if st.button("Generate recommendation"):
-		recommendation_df = engine.run(sample_input)
-		st.dataframe(recommendation_df, width="stretch")
+		enriched = pd.DataFrame([sample_input])
+		recommendation_df = engine.generate_recommendations(enriched)
+		st.dataframe(recommendation_df, use_container_width=True)
 
 	recommendations_path = REPORTS_DIR / "recommendations.csv"
 	if recommendations_path.exists():
 		st.subheader("Saved Recommendations")
-		st.dataframe(pd.read_csv(recommendations_path).head(25), width="stretch")
+		st.dataframe(pd.read_csv(recommendations_path).head(25), use_container_width=True)
 
 
 if __name__ == "__main__":
