@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 from streamlit import runtime
 
-from src.recommendation_engine import RecommendationEngine
+from ml_pipeline.src.recommendation_engine import RecommendationEngine
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

@@ -815,3 +815,260 @@ ValueError: Data must be 1-dimensional, got ndarray of shape (200, 39) instead
 2026-07-09 08:45:05,068 | INFO | Created SHAP explainer
 2026-07-09 08:45:05,750 | INFO | Calculated SHAP values for 200 rows
 2026-07-09 08:45:08,365 | INFO | SHAP explainability artifacts generated successfully
+2026-07-09 19:31:47,165 | INFO | Single prediction generated: {'prediction': 0, 'probability': 0.3349, 'risk_level': 'Low', 'prediction_label': 'Churn unlikely'}
+2026-07-09 21:35:02,069 | INFO | Loaded training data: train=(4033, 39), test=(1009, 39)
+2026-07-09 21:35:02,071 | INFO | Starting model comparison
+2026-07-09 21:35:02,072 | INFO | Training model: Logistic Regression
+2026-07-09 21:35:02,456 | INFO | Model Logistic Regression -> Accuracy=0.7413 Precision=0.5070 Recall=0.8165 F1=0.6255 ROC_AUC=0.8514 CV=0.8472
+2026-07-09 21:35:02,456 | INFO | Training model: Random Forest
+2026-07-09 21:35:20,953 | INFO | Model Random Forest -> Accuracy=0.7909 Precision=0.6296 Recall=0.5094 F1=0.5631 ROC_AUC=0.8406 CV=0.8275
+2026-07-09 21:35:20,954 | INFO | Training model: Decision Tree
+2026-07-09 21:35:21,322 | INFO | Model Decision Tree -> Accuracy=0.7235 Precision=0.4766 Recall=0.4569 F1=0.4665 ROC_AUC=0.6378 CV=0.6526
+2026-07-09 21:35:21,324 | INFO | Training model: Gradient Boosting
+2026-07-09 21:35:30,080 | INFO | Model Gradient Boosting -> Accuracy=0.7988 Precision=0.6368 Recall=0.5581 F1=0.5948 ROC_AUC=0.8554 CV=0.8456
+2026-07-09 21:35:30,081 | INFO | Training model: AdaBoost
+2026-07-09 21:35:43,791 | INFO | Model AdaBoost -> Accuracy=0.7978 Precision=0.6352 Recall=0.5543 F1=0.5920 ROC_AUC=0.8529 CV=0.8482
+2026-07-09 21:35:43,791 | INFO | Training model: XGBoost
+2026-07-09 21:35:46,878 | INFO | Model XGBoost -> Accuracy=0.7978 Precision=0.6329 Recall=0.5618 F1=0.5952 ROC_AUC=0.8509 CV=0.8425
+2026-07-09 21:35:46,879 | INFO | Training model: LightGBM
+2026-07-09 21:35:56,254 | INFO | Model LightGBM -> Accuracy=0.7859 Precision=0.6076 Recall=0.5393 F1=0.5714 ROC_AUC=0.8321 CV=0.8263
+2026-07-09 21:35:56,255 | INFO | Training model: CatBoost
+2026-07-09 21:36:12,717 | INFO | Model CatBoost -> Accuracy=0.8028 Precision=0.6491 Recall=0.5543 F1=0.5980 ROC_AUC=0.8528 CV=0.8374
+2026-07-09 21:36:12,717 | INFO | Training model: SVM
+2026-07-09 21:36:41,909 | INFO | Model SVM -> Accuracy=0.7939 Precision=0.6050 Recall=0.6367 F1=0.6204 ROC_AUC=0.8298 CV=0.8315
+2026-07-09 21:36:41,920 | INFO | Best model selected: Gradient Boosting
+2026-07-09 21:36:41,941 | INFO | Saved best model to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\best_model.pkl
+2026-07-09 21:36:41,953 | INFO | Saved model metrics to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\model_metrics.csv
+2026-07-09 21:36:41,955 | INFO | Saved best model info to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\best_model_info.json
+2026-07-09 21:36:41,965 | INFO | Saved tree-based feature importance to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\feature_importance.csv
+2026-07-09 21:36:41,966 | INFO | Model training completed successfully
+2026-07-10 19:43:32,062 | INFO | Loading raw churn dataset from C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\Data\raw\telco_churn.csv
+2026-07-10 19:43:32,134 | INFO | Dataset summary: {'shape': (5043, 22), 'columns': ['Unnamed: 0', 'customerID', 'gender', 'SeniorCitizen', 'Partner', 'Dependents', 'tenure', 'PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies', 'Contract', 'PaperlessBilling', 'PaymentMethod', 'MonthlyCharges', 'TotalCharges', 'Churn'], 'dtypes': {'Unnamed: 0': 'int64', 'customerID': 'object', 'gender': 'object', 'SeniorCitizen': 'object', 'Partner': 'object', 'Dependents': 'object', 'tenure': 'int64', 'PhoneService': 'object', 'MultipleLines': 'object', 'InternetService': 'object', 'OnlineSecurity': 'object', 'OnlineBackup': 'object', 'DeviceProtection': 'object', 'TechSupport': 'object', 'StreamingTV': 'object', 'StreamingMovies': 'object', 'Contract': 'object', 'PaperlessBilling': 'object', 'PaymentMethod': 'object', 'MonthlyCharges': 'float64', 'TotalCharges': 'object', 'Churn': 'object'}, 'missing_values': {'Unnamed: 0': 0, 'customerID': 0, 'gender': 0, 'SeniorCitizen': 0, 'Partner': 0, 'Dependents': 0, 'tenure': 0, 'PhoneService': 0, 'MultipleLines': 269, 'InternetService': 0, 'OnlineSecurity': 651, 'OnlineBackup': 651, 'DeviceProtection': 651, 'TechSupport': 651, 'StreamingTV': 651, 'StreamingMovies': 651, 'Contract': 0, 'PaperlessBilling': 0, 'PaymentMethod': 0, 'MonthlyCharges': 0, 'TotalCharges': 5, 'Churn': 1}}
+2026-07-10 19:43:32,152 | INFO | Removed 0 duplicate rows
+2026-07-10 19:43:32,215 | ERROR | Failed to clean the raw dataset
+Traceback (most recent call last):
+  File "C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\src\data_loader.py", line 155, in run
+    df = self.create_target(df)
+  File "C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\src\data_loader.py", line 130, in create_target
+    raise ValueError("Unable to derive churn target from raw labels")
+ValueError: Unable to derive churn target from raw labels
+2026-07-10 19:47:31,316 | INFO | Loading raw churn dataset from C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\Data\raw\telco_churn.csv
+2026-07-10 19:47:31,359 | INFO | Dataset summary: {'shape': (5043, 22), 'columns': ['Unnamed: 0', 'customerID', 'gender', 'SeniorCitizen', 'Partner', 'Dependents', 'tenure', 'PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies', 'Contract', 'PaperlessBilling', 'PaymentMethod', 'MonthlyCharges', 'TotalCharges', 'Churn'], 'dtypes': {'Unnamed: 0': 'int64', 'customerID': 'object', 'gender': 'object', 'SeniorCitizen': 'object', 'Partner': 'object', 'Dependents': 'object', 'tenure': 'int64', 'PhoneService': 'object', 'MultipleLines': 'object', 'InternetService': 'object', 'OnlineSecurity': 'object', 'OnlineBackup': 'object', 'DeviceProtection': 'object', 'TechSupport': 'object', 'StreamingTV': 'object', 'StreamingMovies': 'object', 'Contract': 'object', 'PaperlessBilling': 'object', 'PaymentMethod': 'object', 'MonthlyCharges': 'float64', 'TotalCharges': 'object', 'Churn': 'object'}, 'missing_values': {'Unnamed: 0': 0, 'customerID': 0, 'gender': 0, 'SeniorCitizen': 0, 'Partner': 0, 'Dependents': 0, 'tenure': 0, 'PhoneService': 0, 'MultipleLines': 269, 'InternetService': 0, 'OnlineSecurity': 651, 'OnlineBackup': 651, 'DeviceProtection': 651, 'TechSupport': 651, 'StreamingTV': 651, 'StreamingMovies': 651, 'Contract': 0, 'PaperlessBilling': 0, 'PaymentMethod': 0, 'MonthlyCharges': 0, 'TotalCharges': 5, 'Churn': 1}}
+2026-07-10 19:47:31,376 | INFO | Removed 0 duplicate rows
+2026-07-10 19:47:31,478 | ERROR | Failed to clean the raw dataset
+Traceback (most recent call last):
+  File "C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\src\data_loader.py", line 175, in run
+    df = self.create_target(df)
+  File "C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\src\data_loader.py", line 148, in create_target
+    raise ValueError(f"Unable to derive churn target from raw labels: {bad_values}")
+ValueError: Unable to derive churn target from raw labels: []
+2026-07-10 19:50:27,484 | INFO | Loading raw churn dataset from C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\Data\raw\telco_churn.csv
+2026-07-10 19:50:27,540 | INFO | Dataset summary: {'shape': (5043, 22), 'columns': ['Unnamed: 0', 'customerID', 'gender', 'SeniorCitizen', 'Partner', 'Dependents', 'tenure', 'PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies', 'Contract', 'PaperlessBilling', 'PaymentMethod', 'MonthlyCharges', 'TotalCharges', 'Churn'], 'dtypes': {'Unnamed: 0': 'int64', 'customerID': 'object', 'gender': 'object', 'SeniorCitizen': 'object', 'Partner': 'object', 'Dependents': 'object', 'tenure': 'int64', 'PhoneService': 'object', 'MultipleLines': 'object', 'InternetService': 'object', 'OnlineSecurity': 'object', 'OnlineBackup': 'object', 'DeviceProtection': 'object', 'TechSupport': 'object', 'StreamingTV': 'object', 'StreamingMovies': 'object', 'Contract': 'object', 'PaperlessBilling': 'object', 'PaymentMethod': 'object', 'MonthlyCharges': 'float64', 'TotalCharges': 'object', 'Churn': 'object'}, 'missing_values': {'Unnamed: 0': 0, 'customerID': 0, 'gender': 0, 'SeniorCitizen': 0, 'Partner': 0, 'Dependents': 0, 'tenure': 0, 'PhoneService': 0, 'MultipleLines': 269, 'InternetService': 0, 'OnlineSecurity': 651, 'OnlineBackup': 651, 'DeviceProtection': 651, 'TechSupport': 651, 'StreamingTV': 651, 'StreamingMovies': 651, 'Contract': 0, 'PaperlessBilling': 0, 'PaymentMethod': 0, 'MonthlyCharges': 0, 'TotalCharges': 5, 'Churn': 1}}
+2026-07-10 19:50:27,561 | INFO | Removed 0 duplicate rows
+2026-07-10 19:50:27,718 | WARNING | Dropping 1 rows with missing churn labels
+2026-07-10 19:50:27,798 | INFO | Saved cleaned dataset to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\Data\processed\cleaned_telco.csv
+2026-07-10 19:50:27,799 | INFO | Dataset preprocessing completed successfully
+2026-07-10 20:16:51,895 | INFO | Loading cleaned dataset from C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\Data\processed\cleaned_telco.csv
+2026-07-10 20:16:51,979 | INFO | Loaded dataset shape: (5042, 21)
+2026-07-10 20:16:51,994 | INFO | Train shape: (4033, 19) | Test shape: (1009, 19)
+2026-07-10 20:16:51,997 | INFO | Preprocessing pipeline created
+2026-07-10 20:16:51,998 | INFO | Fitting preprocessing pipeline on training data
+2026-07-10 20:16:52,073 | INFO | Processed train shape: (4033, 41) | processed test shape: (1009, 41)
+2026-07-10 20:16:58,270 | INFO | Resampled training shape: (5928, 41)
+2026-07-10 20:16:58,482 | INFO | Saved processed datasets to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\Data\processed
+2026-07-10 20:16:58,776 | INFO | Saved resampled datasets to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\Data\resampled
+2026-07-10 20:16:58,794 | INFO | Saved preprocessing pipeline
+2026-07-10 20:16:58,797 | INFO | Saved 41 feature names
+2026-07-10 20:16:58,798 | INFO | Preprocessing completed successfully
+2026-07-10 20:17:34,767 | INFO | Loaded training data: train=(4033, 41), test=(1009, 41)
+2026-07-10 20:17:34,767 | INFO | Starting model comparison
+2026-07-10 20:17:34,768 | INFO | Training model: Logistic Regression
+2026-07-10 20:17:35,208 | INFO | Model Logistic Regression -> Accuracy=0.7384 Precision=0.5034 Recall=0.8202 F1=0.6239 ROC_AUC=0.8513 CV=0.8472
+2026-07-10 20:17:35,208 | INFO | Training model: Random Forest
+2026-07-10 20:17:52,066 | INFO | Model Random Forest -> Accuracy=0.8038 Precision=0.6605 Recall=0.5318 F1=0.5892 ROC_AUC=0.8467 CV=0.8323
+2026-07-10 20:17:52,067 | INFO | Training model: Decision Tree
+2026-07-10 20:17:52,412 | INFO | Model Decision Tree -> Accuracy=0.7354 Precision=0.5000 Recall=0.4831 F1=0.4914 ROC_AUC=0.6543 CV=0.6420
+2026-07-10 20:17:52,413 | INFO | Training model: Gradient Boosting
+2026-07-10 20:18:00,292 | INFO | Model Gradient Boosting -> Accuracy=0.7998 Precision=0.6395 Recall=0.5581 F1=0.5960 ROC_AUC=0.8553 CV=0.8453
+2026-07-10 20:18:00,293 | INFO | Training model: AdaBoost
+2026-07-10 20:18:13,593 | INFO | Model AdaBoost -> Accuracy=0.7948 Precision=0.6316 Recall=0.5393 F1=0.5818 ROC_AUC=0.8522 CV=0.8474
+2026-07-10 20:18:13,594 | INFO | Training model: XGBoost
+2026-07-10 20:18:16,111 | INFO | Model XGBoost -> Accuracy=0.7958 Precision=0.6298 Recall=0.5543 F1=0.5896 ROC_AUC=0.8538 CV=0.8413
+2026-07-10 20:18:16,112 | INFO | Training model: LightGBM
+2026-07-10 20:18:21,652 | INFO | Model LightGBM -> Accuracy=0.7780 Precision=0.5907 Recall=0.5243 F1=0.5556 ROC_AUC=0.8330 CV=0.8263
+2026-07-10 20:18:21,653 | INFO | Training model: CatBoost
+2026-07-10 20:18:42,665 | INFO | Model CatBoost -> Accuracy=0.7998 Precision=0.6444 Recall=0.5431 F1=0.5894 ROC_AUC=0.8537 CV=0.8357
+2026-07-10 20:18:42,666 | INFO | Training model: SVM
+2026-07-10 20:19:08,535 | INFO | Model SVM -> Accuracy=0.7889 Precision=0.5993 Recall=0.6105 F1=0.6048 ROC_AUC=0.8348 CV=0.8327
+2026-07-10 20:19:08,546 | INFO | Best model selected: Gradient Boosting
+2026-07-10 20:19:08,561 | INFO | Saved best model to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\best_model.pkl
+2026-07-10 20:19:08,569 | INFO | Saved model metrics to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\model_metrics.csv
+2026-07-10 20:19:08,572 | INFO | Saved best model info to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\best_model_info.json
+2026-07-10 20:19:08,579 | INFO | Saved tree-based feature importance to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\feature_importance.csv
+2026-07-10 20:19:08,579 | INFO | Model training completed successfully
+2026-07-10 20:20:08,911 | INFO | Loaded best model name: Gradient Boosting
+2026-07-10 20:20:08,956 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:20:25,266 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:20:35,611 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:20:54,097 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:21:13,391 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:21:23,595 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:21:39,219 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:21:55,875 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:22:02,434 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:22:36,626 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:22:49,773 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:23:19,950 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:23:39,262 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:23:57,145 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:24:21,574 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:24:39,853 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:25:09,668 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:25:44,450 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:26:04,709 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:26:26,379 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:26:48,633 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:27:01,558 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:27:21,965 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:27:40,124 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:27:57,338 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:28:17,907 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:28:45,639 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:29:00,092 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:29:24,999 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:29:32,085 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:29:49,971 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:30:15,381 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:30:30,428 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:30:46,234 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:31:04,125 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:31:18,286 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:31:44,117 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:31:59,164 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:32:10,632 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:32:27,739 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:32:48,306 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:33:16,057 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:33:30,646 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:33:48,568 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:34:03,763 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:34:22,618 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:34:36,835 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:34:49,950 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:34:58,246 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:35:09,741 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:35:18,387 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:35:23,469 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:35:31,626 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:35:38,595 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:35:47,364 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:35:57,105 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:36:07,997 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:36:16,534 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:36:24,832 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:36:36,696 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:36:47,074 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:37:05,344 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:37:14,606 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:37:23,322 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:37:48,528 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:37:58,354 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:38:18,638 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:38:38,944 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:38:58,002 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:39:17,640 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:39:53,751 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:40:06,502 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:40:25,725 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:40:36,785 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:40:48,992 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:41:00,013 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:41:21,250 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:41:29,142 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:41:46,365 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:42:09,199 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:42:46,503 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:43:08,055 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:43:16,176 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:43:25,099 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:43:33,683 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:43:40,515 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:43:54,706 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:44:06,211 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:44:22,445 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:44:30,093 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:44:39,103 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:44:48,337 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:44:54,898 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:45:01,031 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:45:08,155 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:45:15,515 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:45:24,734 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:45:41,794 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:45:49,029 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:46:09,114 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:46:15,137 | INFO | Optuna completed for Gradient Boosting with best ROC AUC 0.8504
+2026-07-10 20:46:15,172 | INFO | Loaded tuning data: X=(4033, 41), y=(4033,)
+2026-07-10 20:46:19,773 | INFO | Trained tuned model for Gradient Boosting
+2026-07-10 20:46:19,797 | INFO | Saved tuned model to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\best_model.pkl
+2026-07-10 20:46:19,800 | INFO | Saved best parameters to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\best_params.json
+2026-07-10 20:46:19,861 | INFO | Saved study to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\study.pkl
+2026-07-10 20:46:19,907 | INFO | Saved optimization history to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\optimization_history.csv
+2026-07-10 20:46:19,909 | INFO | Best ROC AUC for Gradient Boosting: 0.8504
+2026-07-10 20:46:19,909 | INFO | Best parameters: {'n_estimators': 433, 'learning_rate': 0.020589728197687916, 'max_depth': 2, 'min_samples_split': 5, 'min_samples_leaf': 4, 'subsample': 0.8099025726528951}
+2026-07-10 20:46:19,911 | INFO | Optuna tuning completed successfully
+2026-07-10 20:47:12,522 | INFO | Single prediction generated: {'prediction': 1, 'probability': 0.6488, 'risk_level': 'High', 'prediction_label': 'Churn likely'}
+2026-07-10 20:47:31,334 | INFO | Loaded revenue-risk input data with shape (5042, 22)
+2026-07-10 20:47:31,504 | INFO | Batch prediction completed for 5042 records
+2026-07-10 20:47:31,508 | INFO | Generated churn predictions for revenue-risk analysis
+2026-07-10 20:47:31,605 | INFO | Calculated revenue-risk columns
+2026-07-10 20:47:31,611 | INFO | Assigned customer risk segments
+2026-07-10 20:47:31,630 | INFO | Saved 154 high-risk customers
+2026-07-10 20:47:31,638 | INFO | Saved revenue summary
+2026-07-10 20:47:31,670 | INFO | Saved revenue-by-segment report
+2026-07-10 20:47:31,678 | INFO | Saved executive KPIs
+2026-07-10 20:47:34,035 | INFO | Saved revenue risk plot to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\reports\revenue_risk_by_segment.png
+2026-07-10 20:47:34,213 | INFO | Revenue-risk analysis completed successfully
+2026-07-10 20:47:54,117 | INFO | Saved recommendations to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\reports\recommendations.csv
+2026-07-10 20:47:54,118 | INFO | Generated customer recommendations successfully
+2026-07-10 20:48:15,262 | ERROR | SHAP explainability failed
+Traceback (most recent call last):
+  File "C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\src\shap_explainer.py", line 220, in run
+    self.create_explainer()
+  File "C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\src\shap_explainer.py", line 72, in create_explainer
+    raise ImportError("shap is not installed")
+ImportError: shap is not installed
+2026-07-10 20:51:37,467 | INFO | Created SHAP explainer
+2026-07-10 20:51:38,695 | INFO | Calculated SHAP values for 200 rows
+2026-07-10 20:51:44,158 | INFO | SHAP explainability artifacts generated successfully
+2026-07-10 21:06:30,914 | INFO | Created SHAP explainer
+2026-07-10 21:06:32,396 | INFO | Calculated SHAP values for 200 rows
+2026-07-10 21:06:37,782 | INFO | SHAP explainability artifacts generated successfully
+2026-07-10 22:07:39,650 | INFO | Single prediction generated: {'prediction': 1, 'probability': 0.605, 'risk_level': 'High', 'prediction_label': 'Churn likely'}
+2026-07-10 23:17:02,853 | INFO | Loaded training data: train=(4033, 41), test=(1009, 41)
+2026-07-10 23:17:02,854 | INFO | Starting model comparison
+2026-07-10 23:17:02,856 | INFO | Training model: Logistic Regression
+2026-07-10 23:17:03,347 | INFO | Model Logistic Regression -> Accuracy=0.7384 Precision=0.5034 Recall=0.8202 F1=0.6239 ROC_AUC=0.8513 CV=0.8472
+2026-07-10 23:17:03,348 | INFO | Training model: Random Forest
+2026-07-10 23:17:21,386 | INFO | Model Random Forest -> Accuracy=0.8038 Precision=0.6605 Recall=0.5318 F1=0.5892 ROC_AUC=0.8467 CV=0.8323
+2026-07-10 23:17:21,387 | INFO | Training model: Decision Tree
+2026-07-10 23:17:21,759 | INFO | Model Decision Tree -> Accuracy=0.7354 Precision=0.5000 Recall=0.4831 F1=0.4914 ROC_AUC=0.6543 CV=0.6420
+2026-07-10 23:17:21,760 | INFO | Training model: Gradient Boosting
+2026-07-10 23:17:30,405 | INFO | Model Gradient Boosting -> Accuracy=0.7998 Precision=0.6395 Recall=0.5581 F1=0.5960 ROC_AUC=0.8553 CV=0.8453
+2026-07-10 23:17:30,405 | INFO | Training model: AdaBoost
+2026-07-10 23:17:44,258 | INFO | Model AdaBoost -> Accuracy=0.7948 Precision=0.6316 Recall=0.5393 F1=0.5818 ROC_AUC=0.8522 CV=0.8474
+2026-07-10 23:17:44,258 | INFO | Training model: XGBoost
+2026-07-10 23:17:46,921 | INFO | Model XGBoost -> Accuracy=0.7958 Precision=0.6298 Recall=0.5543 F1=0.5896 ROC_AUC=0.8538 CV=0.8413
+2026-07-10 23:17:46,923 | INFO | Training model: LightGBM
+2026-07-10 23:17:55,316 | INFO | Model LightGBM -> Accuracy=0.7780 Precision=0.5907 Recall=0.5243 F1=0.5556 ROC_AUC=0.8330 CV=0.8263
+2026-07-10 23:17:55,318 | INFO | Training model: CatBoost
+2026-07-10 23:18:10,783 | INFO | Model CatBoost -> Accuracy=0.7998 Precision=0.6444 Recall=0.5431 F1=0.5894 ROC_AUC=0.8537 CV=0.8357
+2026-07-10 23:18:10,784 | INFO | Training model: SVM
+2026-07-10 23:18:38,726 | INFO | Model SVM -> Accuracy=0.7889 Precision=0.5993 Recall=0.6105 F1=0.6048 ROC_AUC=0.8348 CV=0.8327
+2026-07-10 23:18:38,738 | INFO | Best model selected: Gradient Boosting
+2026-07-10 23:18:38,756 | INFO | Saved best model to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\best_model.pkl
+2026-07-10 23:18:38,768 | INFO | Saved model metrics to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\model_metrics.csv
+2026-07-10 23:18:38,770 | INFO | Saved best model info to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\best_model_info.json
+2026-07-10 23:18:38,781 | INFO | Saved tree-based feature importance to C:\Users\raich\Desktop\decision\Customer-Churn-Demand-Prediction-Using-ML\models\feature_importance.csv
+2026-07-10 23:18:38,782 | INFO | Model training completed successfully
+2026-07-10 23:22:16,599 | INFO | Created SHAP explainer

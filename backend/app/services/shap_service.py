@@ -4,11 +4,11 @@ import sys
 from pathlib import Path
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "ml_pipeline"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.shap_explainer import SHAPExplainer
+from ml_pipeline.src.shap_explainer import SHAPExplainer
 
-REPORTS_DIR = Path(__file__).resolve().parents[4] / "reports"
+REPORTS_DIR = Path(__file__).resolve().parents[2] / "reports"
 
 
 class SHAPService:
@@ -23,3 +23,5 @@ class SHAPService:
         if path.exists():
             return pd.read_csv(path).to_dict(orient="records")
         return []
+    
+    

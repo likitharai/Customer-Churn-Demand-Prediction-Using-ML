@@ -4,9 +4,9 @@ import sys
 from pathlib import Path
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "ml_pipeline"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.recommendation_engine import RecommendationEngine
+from ml_pipeline.src.recommendation_engine import RecommendationEngine
 
 
 class RecommendationService:

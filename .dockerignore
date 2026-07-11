@@ -1,0 +1,9 @@
+# Data & Models
+Data/raw/*.csv
+Data/processed/*.csv
+Data/resampled/*.csv
+*.pkl
+!model_pipeline.pkl
+!ml_pipeline/
+!ml_pipeline/models/
+!ml_pipeline/models/.gitkeep

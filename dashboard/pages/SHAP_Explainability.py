@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 from streamlit import runtime
 
-from src.shap_explainer import SHAPExplainer
+from ml_pipeline.src.shap_explainer import SHAPExplainer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

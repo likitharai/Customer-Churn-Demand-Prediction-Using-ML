@@ -12,8 +12,8 @@ import pandas as pd
 import streamlit as st
 from streamlit import runtime
 
-from src.predict import ChurnPredictor
-from src.recommendation_engine import RecommendationEngine
+from ml_pipeline.src.predict import ChurnPredictor
+from ml_pipeline.src.recommendation_engine import RecommendationEngine
 
 
 def main() -> None:

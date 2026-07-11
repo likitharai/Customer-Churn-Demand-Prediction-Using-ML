@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 from streamlit import runtime
 
-from src.revenue_risk import RevenueRiskAnalyzer
+from ml_pipeline.src.revenue_risk import RevenueRiskAnalyzer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

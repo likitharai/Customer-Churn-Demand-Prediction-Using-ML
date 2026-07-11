@@ -1,0 +1,6 @@
+{
+    "best_model": "Gradient Boosting",
+    "accuracy": 0.7998,
+    "roc_auc": 0.8553,
+    "timestamp_utc": "2026-07-10T17:48:38.769545+00:00"
+}

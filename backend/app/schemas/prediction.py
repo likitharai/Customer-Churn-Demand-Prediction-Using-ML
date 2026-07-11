@@ -25,6 +25,7 @@ class CustomerInput(BaseModel):
 
 
 class PredictionResponse(BaseModel):
+    prediction: int
     prediction_label: str
     probability: float
     risk_level: str

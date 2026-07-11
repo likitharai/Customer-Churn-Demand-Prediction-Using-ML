@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import pandas as pd
 
-REPORTS_DIR = Path(__file__).resolve().parents[4] / "reports"
+REPORTS_DIR = Path(__file__).resolve().parents[2] / "reports"
 
 
 class RevenueService:
