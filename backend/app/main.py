@@ -42,10 +42,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 
-@app.get("/")
-def root():
-    return {"message": "RetainIQ B2B API is running", "version": "3.4.0"}
-
 
 app.include_router(health.router, prefix="/api/health", tags=["Health"])
 app.include_router(auth_b2b.router, prefix="/api/auth", tags=["Employee authentication"])
@@ -56,7 +52,36 @@ app.include_router(role_views.router, prefix="/api/workspace", tags=["Role dashb
 app.include_router(workspace.router, prefix="/api/workspace", tags=["Workspace operations"])
 app.include_router(retention_workflow.router, prefix="/api/workspace", tags=["Connected retention workflow"])
 app.include_router(prediction.router, prefix="/api/prediction", tags=["Ad hoc prediction"], dependencies=[Depends(get_current_user)])
+ 
+# Static SPA Serving for All-in-One deployment
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
+FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if not FRONTEND_DIST.exists():
+    FRONTEND_DIST = Path("/app/frontend/dist")
+
+if FRONTEND_DIST.exists() and (FRONTEND_DIST / "index.html").exists():
+    if (FRONTEND_DIST / "assets").exists():
+        app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
+
+    @app.get("/")
+    async def serve_root():
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path == "api":
+            return {"error": "API route not found"}
+        file_path = FRONTEND_DIST / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(FRONTEND_DIST / "index.html")
+else:
+    @app.get("/")
+    def root():
+        return {"message": "RetainIQ B2B API is running", "version": "3.4.0"}
 
 if __name__ == "__main__":
     import uvicorn
