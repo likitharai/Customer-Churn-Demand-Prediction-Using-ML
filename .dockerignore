@@ -1,4 +1,4 @@
-# Data & Models
+# Data & models
 Data/raw/*.csv
 Data/processed/*.csv
 Data/resampled/*.csv
@@ -7,3 +7,23 @@ Data/resampled/*.csv
 !ml_pipeline/
 !ml_pipeline/models/
 !ml_pipeline/models/.gitkeep
+
+# Local environments and generated content
+.git/
+docker/.git/
+.github/
+.vscode/
+.venv/
+venv/
+venv_backend/
+venv_ml/
+backend/venv/
+frontend/node_modules/
+frontend/dist/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+catboost_info/
+logs/
+screenshots/
+structure.txt

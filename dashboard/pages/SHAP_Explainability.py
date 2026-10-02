@@ -5,14 +5,17 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Ensure project root is on sys.path so `src.*` imports resolve correctly
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT / "backend") not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / "backend"))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
 import streamlit as st
 from streamlit import runtime
 
-from ml_pipeline.src.shap_explainer import SHAPExplainer
+from app.services.shap_service import SHAPService
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -28,11 +31,11 @@ def main() -> None:
     st.title("SHAP Explainability")
     st.caption("Inspect global and local feature contributions for the trained model.")
 
-    if st.button("Generate SHAP artifacts"):
-        explainer = SHAPExplainer()
-        results = explainer.run()
-        st.success("SHAP artifacts generated.")
-        st.json({key: str(value) for key, value in results.items()})
+    if st.button("Inspect SHAP drivers"):
+        service = SHAPService()
+        results = service.explain({})
+        st.success("Loaded model feature importance attributions.")
+        st.json(results)
 
     shap_dir = REPORTS_DIR / "shap"
     for title, filename in (

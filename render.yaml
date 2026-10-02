@@ -1,0 +1,54 @@
+services:
+  # 1. FastAPI Production Backend
+  - type: web
+    name: retainiq-backend
+    runtime: python
+    buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt -r requirements.txt"
+    startCommand: "cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: retainiq-db
+          property: connectionString
+      - key: TOKEN_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@retainiq.internal
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "https://retainiq-frontend.onrender.com,http://localhost:3000"
+      - key: APP_BASE_URL
+        value: "https://retainiq-frontend.onrender.com"
+      - key: MODEL_PATH
+        value: "../model_pipeline.pkl"
+      - key: MODEL_VERSION
+        value: "v1.0.0"
+      - key: CHURN_DECISION_THRESHOLD
+        value: "0.50"
+
+  # 2. React + Vite Production Frontend
+  - type: web
+    name: retainiq-frontend
+    runtime: static
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: "frontend/dist"
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: retainiq-backend
+          type: web
+          property: host
+
+databases:
+  # 3. PostgreSQL Managed Database
+  - name: retainiq-db
+    databaseName: churndb
+    user: retainiq
+    plan: free

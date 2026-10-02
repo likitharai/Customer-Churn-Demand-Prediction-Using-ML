@@ -5,14 +5,17 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Ensure project root is on sys.path so `src.*` imports resolve correctly
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT / "backend") not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / "backend"))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
 import streamlit as st
 from streamlit import runtime
 
-from ml_pipeline.src.predict import ChurnPredictor
+from app.services.prediction_service import ChurnPredictor
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

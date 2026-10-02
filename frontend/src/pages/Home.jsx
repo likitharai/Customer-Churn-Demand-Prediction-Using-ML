@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import KPICard from '../components/KPI_Cards/KPICard';
 
 export default function Home() {
@@ -15,3 +15,4 @@ export default function Home() {
     </div>
   );
 }
+

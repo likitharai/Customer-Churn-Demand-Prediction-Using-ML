@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 export default function KPICard({ title, value, subtitle, color = '#e94560' }) {
   return (
@@ -9,3 +9,4 @@ export default function KPICard({ title, value, subtitle, color = '#e94560' }) {
     </div>
   );
 }
+

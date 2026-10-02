@@ -1,17 +1,17 @@
-import React from 'react';
+﻿import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 const links = [
-  { to: '/', label: '🏠 Home' },
-  { to: '/executive', label: '📊 Executive Dashboard' },
-  { to: '/customers', label: '👥 Customer Analytics' },
-  { to: '/prediction', label: '🤖 Prediction' },
-  { to: '/revenue', label: '💰 Revenue Risk' },
-  { to: '/recommendations', label: '💡 Recommendations' },
-  { to: '/shap', label: '🔍 SHAP Analysis' },
-  { to: '/whatif', label: '🔄 What-If Analysis' },
-  { to: '/sql', label: '🗄️ SQL Insights' },
-  { to: '/about', label: 'ℹ️ About' },
+  { to: '/', label: 'ðŸ  Home' },
+  { to: '/executive', label: 'ðŸ“Š Executive Dashboard' },
+  { to: '/customers', label: 'ðŸ‘¥ Customer Analytics' },
+  { to: '/prediction', label: 'ðŸ¤– Prediction' },
+  { to: '/revenue', label: 'ðŸ’° Revenue Risk' },
+  { to: '/recommendations', label: 'ðŸ’¡ Recommendations' },
+  { to: '/shap', label: 'ðŸ” SHAP Analysis' },
+  { to: '/whatif', label: 'ðŸ”„ What-If Analysis' },
+  { to: '/sql', label: 'ðŸ—„ï¸ SQL Insights' },
+  { to: '/about', label: 'â„¹ï¸ About' },
 ];
 
 export default function Sidebar() {
@@ -39,3 +39,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+

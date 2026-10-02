@@ -1,4 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
 from app.database.session import Base
 
 class Customer(Base):
@@ -25,3 +28,32 @@ class Customer(Base):
     monthly_charges = Column(Float, nullable=True)
     total_charges = Column(Float, nullable=True)
     churn = Column(String, nullable=True)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    full_name = Column(String(120), nullable=False)
+    password_hash = Column(String(512), nullable=False)
+    role = Column(String(20), nullable=False, default="customer")
+    company = Column(String(120), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    interactions = relationship("CustomerInteraction", back_populates="owner")
+
+
+class CustomerInteraction(Base):
+    __tablename__ = "customer_interactions"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    customer_id = Column(String(20), nullable=True, index=True)
+    channel = Column(String(30), nullable=False)
+    subject = Column(String(160), nullable=False)
+    notes = Column(Text, nullable=True)
+    sentiment = Column(String(20), nullable=False, default="neutral")
+    status = Column(String(20), nullable=False, default="open")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    owner = relationship("User", back_populates="interactions")

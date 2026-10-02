@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { predictChurn } from '../services/predictionService';
 
 export default function Prediction() {
@@ -30,3 +30,4 @@ export default function Prediction() {
     </div>
   );
 }
+

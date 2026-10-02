@@ -1,0 +1,34 @@
+services:
+  frontend:
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    build:
+      args:
+        VITE_API_URL: ${VITE_API_URL:?Set the public HTTPS API URL}
+  backend:
+    restart: unless-stopped
+    ports: []
+    expose:
+      - "8000"
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=postgresql+psycopg://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/churndb
+      - TOKEN_SECRET=${TOKEN_SECRET:?Set TOKEN_SECRET}
+      - TOKEN_TTL_SECONDS=${TOKEN_TTL_SECONDS:-3600}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:?Set ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
+      - CORS_ORIGINS=${CORS_ORIGINS:?Set the HTTPS frontend origin}
+      - APP_BASE_URL=${APP_BASE_URL:?Set the HTTPS frontend URL}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - SMTP_USE_SSL=${SMTP_USE_SSL:-false}
+  db:
+    restart: unless-stopped
+    ports: []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}

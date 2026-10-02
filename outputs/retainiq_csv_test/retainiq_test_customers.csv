@@ -1,0 +1,13 @@
+customerID,gender,SeniorCitizen,Partner,Dependents,tenure,PhoneService,MultipleLines,InternetService,OnlineSecurity,OnlineBackup,DeviceProtection,TechSupport,StreamingTV,StreamingMovies,Contract,PaperlessBilling,PaymentMethod,MonthlyCharges,TotalCharges,Churn
+TEST-0001,Female,0,Yes,No,2,Yes,No,Fiber optic,No,No,No,No,Yes,Yes,Month-to-month,Yes,Electronic check,95.5,191,Yes
+TEST-0002,Male,1,No,No,5,Yes,Yes,Fiber optic,No,No,Yes,No,Yes,No,Month-to-month,Yes,Electronic check,89.1,445.5,Yes
+TEST-0003,Female,0,No,No,1,Yes,No,DSL,No,No,No,No,No,No,Month-to-month,Yes,Mailed check,49.8,49.8,Yes
+TEST-0004,Male,0,Yes,Yes,8,Yes,Yes,Fiber optic,No,Yes,No,No,Yes,Yes,Month-to-month,Yes,Bank transfer (automatic),99.2,793.6,Yes
+TEST-0005,Female,0,Yes,No,18,Yes,No,DSL,Yes,Yes,No,Yes,No,No,One year,No,Credit card (automatic),61.4,1105.2,No
+TEST-0006,Male,0,No,No,24,Yes,Yes,DSL,Yes,No,Yes,Yes,No,No,One year,Yes,Bank transfer (automatic),67.7,1624.8,No
+TEST-0007,Female,1,Yes,No,36,Yes,Yes,Fiber optic,Yes,Yes,Yes,No,Yes,Yes,One year,Yes,Credit card (automatic),105.3,3790.8,No
+TEST-0008,Male,0,Yes,Yes,48,Yes,No,DSL,Yes,Yes,Yes,Yes,Yes,No,Two year,No,Bank transfer (automatic),79.9,3835.2,No
+TEST-0009,Female,0,Yes,Yes,72,Yes,Yes,Fiber optic,Yes,Yes,Yes,Yes,Yes,Yes,Two year,No,Credit card (automatic),112,8064,No
+TEST-0010,Male,0,No,No,12,No,No phone service,DSL,No,Yes,No,Yes,No,No,Month-to-month,Yes,Electronic check,39.6,475.2,No
+TEST-0011,Female,1,No,No,3,Yes,No,Fiber optic,No,No,No,No,Yes,Yes,Month-to-month,Yes,Electronic check,101.8,305.4,Yes
+TEST-0012,Male,0,Yes,Yes,60,Yes,Yes,No,No internet service,No internet service,No internet service,No internet service,No internet service,No internet service,Two year,No,Mailed check,25.2,1512,No

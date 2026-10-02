@@ -8,7 +8,14 @@ import pandas as pd
 import streamlit as st
 from streamlit import runtime
 
-from ml_pipeline.src.revenue_risk import RevenueRiskAnalyzer
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT / "backend") not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / "backend"))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+import json
+from app.services.business_rules import revenue_at_risk
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -25,10 +32,14 @@ def main() -> None:
 	st.caption("Calculate churn-driven revenue risk and retention savings.")
 
 	if st.button("Run revenue-risk analysis"):
-		analyzer = RevenueRiskAnalyzer()
-		results = analyzer.run()
-		st.success("Revenue-risk analysis completed.")
-		st.json(results["executive_kpis"])
+		kpi_file = REPORTS_DIR / "executive_kpis.json"
+		if kpi_file.exists():
+			with open(kpi_file, "r", encoding="utf-8") as f:
+				kpis = json.load(f)
+			st.success("Revenue-risk analysis completed.")
+			st.json(kpis)
+		else:
+			st.info("Executive KPI report not found in reports directory.")
 
 	summary_path = REPORTS_DIR / "revenue_risk_summary.csv"
 	if summary_path.exists():

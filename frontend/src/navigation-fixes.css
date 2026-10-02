@@ -1,0 +1,39 @@
+.import-actions {
+  grid-template-columns: minmax(180px, 1.5fr) .5fr .6fr 1fr auto;
+}
+
+.danger-button {
+  border: 1px solid #efb2aa;
+  border-radius: 9px;
+  background: #fff3f1;
+  color: #b42318;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.danger-button:hover {
+  background: #fee4e2;
+}
+
+.route-error {
+  margin: 24px;
+  max-width: 700px;
+  padding: 32px;
+}
+
+.invite-token > span {
+  display: block;
+  margin: 6px 0 10px;
+}
+
+.delivery-sent {
+  border-color: #8ed0ae;
+  background: #effaf4;
+}
+
+@media (max-width: 800px) {
+  .import-actions {
+    grid-template-columns: 1fr;
+  }
+}

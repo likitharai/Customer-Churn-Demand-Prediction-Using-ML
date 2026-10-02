@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import KPICard from '../components/KPI_Cards/KPICard';
 import { getExecutiveKPIs } from '../services/analyticsService';
 
@@ -25,3 +25,4 @@ export default function ExecutiveDashboard() {
     </div>
   );
 }
+

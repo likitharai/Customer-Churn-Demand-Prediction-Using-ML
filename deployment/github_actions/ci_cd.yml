@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip install -r backend/requirements.txt
-      - run: echo "Add pytest tests here"
+      - run: python -m pytest backend/tests ml_pipeline/tests -q
 
   build-frontend:
     runs-on: ubuntu-latest

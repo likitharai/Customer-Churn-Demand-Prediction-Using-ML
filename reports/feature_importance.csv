@@ -1,40 +1,42 @@
 Feature,Importance
-numeric__tenure,15.884319103538614
-categorical__Contract_Month-to-month,13.166554677868175
-numeric__MonthlyCharges,11.49840347447128
-categorical__Contract_Two year,10.656527465199737
-categorical__InternetService_Fiber optic,9.9030533990325
-numeric__TotalCharges,6.598031805128811
-categorical__InternetService_No,4.145723064827242
-categorical__InternetService_DSL,3.352822297478484
-categorical__PaymentMethod_Electronic check,3.339974643319239
-categorical__PaperlessBilling_No,1.5509945323062766
-categorical__Contract_One year,1.296097991344058
-categorical__TechSupport_No,1.1078548029331794
-categorical__OnlineSecurity_Yes,1.1049689448945603
-categorical__PaperlessBilling_Yes,1.0677427265993973
-categorical__TechSupport_Yes,1.0579322370571
-categorical__PaymentMethod_Credit card (automatic),0.9591259064057486
-categorical__StreamingMovies_No,0.9346359919681948
-categorical__PaymentMethod_Mailed check,0.8875031970599073
-categorical__MultipleLines_No,0.8097716398681334
-categorical__OnlineSecurity_No,0.7942855855904714
-categorical__StreamingMovies_Yes,0.7787207807523396
-categorical__SeniorCitizen_No,0.7104025683706839
-categorical__StreamingTV_Yes,0.7062667016253265
-categorical__SeniorCitizen_Yes,0.6902114387713953
-categorical__OnlineBackup_Yes,0.6695761513822582
-categorical__StreamingTV_No,0.6316740091989862
-categorical__PaymentMethod_Bank transfer (automatic),0.6304375272570742
-categorical__OnlineBackup_No,0.5384921535486764
-categorical__PhoneService_Yes,0.5365303352737476
-categorical__Partner_Yes,0.5280297113882971
-categorical__Dependents_Yes,0.5232309181655723
-categorical__PhoneService_No,0.5206466630217028
-categorical__Dependents_No,0.4973510544108181
-categorical__MultipleLines_Yes,0.46404155795981655
-categorical__Partner_No,0.3916310675361839
-categorical__DeviceProtection_No,0.3194875211898906
-categorical__DeviceProtection_Yes,0.261457124645754
-categorical__gender_Female,0.25875500131012363
-categorical__gender_Male,0.226734227300249
+tenure,177.0
+MonthlyCharges,169.0
+TotalCharges,144.0
+Contract_Two year,40.0
+Contract_One year,37.0
+InternetService_Fiber optic,36.0
+Contract_Month-to-month,29.0
+PaymentMethod_Electronic check,28.0
+SeniorCitizen_0,27.0
+PaperlessBilling_No,26.0
+TechSupport_No,24.0
+StreamingMovies_No,22.0
+SeniorCitizen_False,21.0
+OnlineSecurity_No,21.0
+SeniorCitizen_1,20.0
+InternetService_No,20.0
+MultipleLines_No,18.0
+PhoneService_No,17.0
+OnlineBackup_No,15.0
+PaymentMethod_Mailed check,12.0
+PaymentMethod_Bank transfer (automatic),11.0
+Dependents_No,10.0
+gender_Female,8.0
+SeniorCitizen_True,8.0
+Partner_No,8.0
+PhoneService_Yes,8.0
+InternetService_DSL,7.0
+StreamingTV_No,7.0
+PaymentMethod_Credit card (automatic),7.0
+TechSupport_Yes,6.0
+StreamingMovies_Yes,5.0
+PaperlessBilling_Yes,5.0
+MultipleLines_Yes,4.0
+OnlineSecurity_Yes,4.0
+OnlineBackup_Yes,4.0
+DeviceProtection_No,4.0
+StreamingTV_Yes,4.0
+gender_Male,3.0
+Dependents_Yes,3.0
+Partner_Yes,2.0
+DeviceProtection_Yes,0.0

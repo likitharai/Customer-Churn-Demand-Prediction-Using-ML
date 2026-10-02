@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 export default function RevenueRisk() {
   return (
@@ -8,3 +8,4 @@ export default function RevenueRisk() {
     </div>
   );
 }
+

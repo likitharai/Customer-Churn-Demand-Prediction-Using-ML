@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function ChurnBarChart({ data, xKey, yKey, color = '#e94560' }) {
@@ -14,3 +14,4 @@ export default function ChurnBarChart({ data, xKey, yKey, color = '#e94560' }) {
     </ResponsiveContainer>
   );
 }
+

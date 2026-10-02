@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from '../pages/Home';
 import ExecutiveDashboard from '../pages/ExecutiveDashboard';
@@ -27,3 +27,4 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+

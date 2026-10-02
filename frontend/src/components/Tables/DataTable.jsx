@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 export default function DataTable({ columns, data }) {
   return (
@@ -24,3 +24,4 @@ export default function DataTable({ columns, data }) {
     </div>
   );
 }
+
